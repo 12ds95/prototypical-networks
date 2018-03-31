@@ -17,7 +17,7 @@ class Flatten(nn.Module):
 
     def forward(self, x):
         return x.view(x.size(0), -1)
-
+reg = True
 class Protonet(nn.Module):
     def __init__(self, encoder):
         super(Protonet, self).__init__()
@@ -69,8 +69,12 @@ class Protonet(nn.Module):
         zq = z[n_class*n_support:]
         dists = k_center_euclidean_dist(zq, z_proto)
 
-        log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
-
+        #log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
+               
+        log_p_y = torch.log((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1))
+        global reg
+        if reg:
+            reg = False
         #gather像是在某个维度选出一些来
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
 

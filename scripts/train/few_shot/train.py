@@ -17,7 +17,10 @@ import protonets.utils.data as data_utils
 import protonets.utils.model as model_utils
 import protonets.utils.log as log_utils
 
+#设置了state的回调方法?hook钩子，有点前端的感觉
+
 def main(opt):
+    # 新建日志目录
     if not os.path.isdir(opt['log.exp_dir']):
         os.makedirs(opt['log.exp_dir'])
 
@@ -35,7 +38,8 @@ def main(opt):
     torch.manual_seed(1234)
     if opt['data.cuda']:
         torch.cuda.manual_seed(1234)
-
+    
+    #??? trainval是什么???
     if opt['data.trainval']:
         data = data_utils.load(opt, ['trainval'])
         train_loader = data['trainval']
@@ -44,6 +48,7 @@ def main(opt):
         data = data_utils.load(opt, ['train', 'val'])
         train_loader = data['train']
         val_loader = data['val']
+
 
     model = model_utils.load(opt)
 
@@ -56,25 +61,29 @@ def main(opt):
 
     if val_loader is not None:
         meters['val'] = { field: tnt.meter.AverageValueMeter() for field in opt['log.fields'] }
-
+    
+    # 看名字知道功能的start函数，配置优化器
     def on_start(state):
         if os.path.isfile(trace_file):
             os.remove(trace_file)
         state['scheduler'] = lr_scheduler.StepLR(state['optimizer'], opt['train.decay_every'], gamma=0.5)
     engine.hooks['on_start'] = on_start
-
+    
+    # 第一个epoch需要解决的事
     def on_start_epoch(state):
         for split, split_meters in meters.items():
             for field, meter in split_meters.items():
                 meter.reset()
         state['scheduler'].step()
     engine.hooks['on_start_epoch'] = on_start_epoch
-
+    
+    # 更新那个算平均的类
     def on_update(state):
         for field, meter in meters['train'].items():
             meter.add(state['output'][field])
     engine.hooks['on_update'] = on_update
-
+    
+    #一个epoch结束时判断训练效果，以及是否结束训练(patience?为什么不用loss的改变?看了实际训练貌似loss变化挺大的)
     def on_end_epoch(hook_state, state):
         if val_loader is not None:
             if 'best_loss' not in hook_state:
