@@ -49,9 +49,9 @@ def main(opt):
     torch.manual_seed(1234)
     if data_opt['data.cuda']:
         torch.cuda.manual_seed(1234)
-
+    print(data_opt)
     data = data_utils.load(data_opt, ['test'])
-
+   
     if data_opt['data.cuda']:
         model.cuda()
 

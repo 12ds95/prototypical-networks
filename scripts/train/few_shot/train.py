@@ -11,6 +11,10 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torchvision
 import torchnet as tnt
 
+import sys
+import os.path
+sys.path.append('/home/cx/lifelong_learning/prototypical-networks')
+print(sys.path)
 from protonets.engine import Engine
 
 import protonets.utils.data as data_utils
