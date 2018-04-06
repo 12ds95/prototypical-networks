@@ -16,15 +16,27 @@ from torchnet.transform import compose
 import protonets
 from protonets.data.base import convert_dict, CudaTransform, EpisodicBatchSampler, SequentialBatchSampler
 
+# from visdom import Visdom
+# viz = Visdom()
+# REG = 1
+
 MINI_IMGNET_DATA_DIR  = os.path.join(os.path.dirname(__file__), '../../../data/mini_imagenet_split')
 MINI_IMGNET_CACHE = { }
 
 def load_image(dataset, key, out_field, d):
     d[out_field] = Image.fromarray(dataset[d[key]])
+    # global REG
+    # REG += 1
+    # if REG==6:
+    #     viz.image(dataset[d[key]].transpose(2, 0, 1))
     return d
 
 def convert_tensor(key, d):
-    d[key] = 1.0 - torch.from_numpy(np.array(d[key], np.float32, copy=False)).transpose(0, 1).contiguous().view(3, d[key].size[0], d[key].size[1])
+    # tmp = np.array(d[key], np.float32, copy=True) / 255.0
+    d[key] = torch.from_numpy(np.array(d[key], np.float32, copy=False).transpose(2, 0, 1) / 255.0).contiguous().view(3, d[key].size[0], d[key].size[1])
+    # d[key] = torch.from_numpy(np.array(d[key], np.float32, copy=False) / 255.0).contiguous().view(3, d[key].size[0], d[key].size[1])
+    # if REG==6:
+    #     viz.image(d[key].numpy())
     return d
 
 def rotate_image(key, rot, d):

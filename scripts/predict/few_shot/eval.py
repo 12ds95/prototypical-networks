@@ -9,10 +9,24 @@ import torchnet as tnt
 from protonets.utils import filter_opt, merge_dict
 import protonets.utils.data as data_utils
 import protonets.utils.model as model_utils
+# import numpy as np
+# from visdom import Visdom
+# viz = Visdom()
 
 def main(opt):
     # load model
     model = torch.load(opt['model.model_path'])
+    # def get_image_input_hook(self, input, output):
+    #     # print(len(input))
+    #     # print(type(input))
+    #     # print(len(output))
+    #     # print(type(output))
+    #     print("in:",input[0].data.cpu().numpy()[0].shape)
+    #     print("out:",output.data.cpu().numpy()[0].shape)
+    #     viz.image(input[0].data.cpu().numpy()[0])
+    #     for i in output.data.cpu().numpy()[0]:
+    #         viz.image(i)
+    # model.encoder[0][0].register_forward_hook(get_image_input_hook)
     model.eval()
 
     # load opts
