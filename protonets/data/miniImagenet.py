@@ -16,7 +16,7 @@ from torchnet.transform import compose
 import protonets
 from protonets.data.base import convert_dict, CudaTransform, EpisodicBatchSampler, SequentialBatchSampler
 
-MINI_IMGNET_DATA_DIR  = os.path.join(os.path.dirname(__file__), '../../../../../../data/mini_imagenet_split')
+MINI_IMGNET_DATA_DIR  = os.path.join(os.path.dirname(__file__), '../../../data/mini_imagenet_split')
 MINI_IMGNET_CACHE = { }
 
 def load_image(dataset, key, out_field, d):
@@ -74,7 +74,7 @@ def extract_episode(n_support, n_query, d):
 
 def get_cache_path(split):
     """Gets cache file name."""
-    cache_path = os.path.join(os.path.dirname(__file__), "../../../../../../data/mini-imagenet/mini-imagenet-cache-" + split + ".pkl")
+    cache_path = os.path.join(os.path.dirname(__file__), "../../../data/mini-imagenet/mini-imagenet-cache-" + split + ".pkl")
     return cache_path
 
 def load(opt, splits):
