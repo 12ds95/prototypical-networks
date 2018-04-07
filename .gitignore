@@ -1,3 +1,4 @@
+*.sh
 *.pyc
 *.swp
 *.egg-info/
