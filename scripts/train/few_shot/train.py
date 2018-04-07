@@ -50,7 +50,8 @@ def main(opt):
         val_loader = data['val']
 
 
-    model = model_utils.load(opt)
+    #model = model_utils.load(opt)
+    model = torch.load("results/m5_5way5shot/pre.t7")
 
     if opt['data.cuda']:
         model.cuda()
