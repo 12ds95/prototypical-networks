@@ -51,7 +51,13 @@ class Protonet(nn.Module):
 
         z = self.encoder.forward(x)
         z_dim = z.size(-1)
-        viz.text("z<br>"+str(z).replace("\n", "<br>"))
+        # def get_image_input_hook(self, input, output):
+        #     viz.text("input: %s, output %s" % (str(input[0].data.size()), str(output.data.size())))
+        # self.encoder[0].register_forward_hook(get_image_input_hook)
+        # self.encoder[1].register_forward_hook(get_image_input_hook)
+        # self.encoder[2].register_forward_hook(get_image_input_hook)
+        # self.encoder[3].register_forward_hook(get_image_input_hook)
+        # viz.text("z<br>"+str(z).replace("\n", "<br>"))
         # z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         def select_centroids(xs):
             """ 
@@ -59,7 +65,7 @@ class Protonet(nn.Module):
             input: 
             output: (n_class, k_centroid, z_dim)
             """
-            viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
+            # viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
             centroids = []
             for i in range(n_class):
                 X = xs[i * n_support:(i+1) * n_support].data.cpu().numpy()
@@ -78,12 +84,12 @@ class Protonet(nn.Module):
         zq = z[n_class*n_support:]
         dists = k_center_euclidean_dist(zq, z_proto)
 
-        #log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
-        #viz.text(str((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1)))       
+        # log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
+        viz.text(str((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1)).replace("\n", "<br>"))       
         log_p_y = torch.log((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1))
-        #assert log_p_y_1.size() == log_p_y.size()
+        # assert log_p_y_1.size() == log_p_y.size()
 
-        #gather像是在某个维度选出一些来
+        # gather像是在某个维度选出一些来
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
 
         _, y_hat = log_p_y.max(2)
