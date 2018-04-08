@@ -11,6 +11,9 @@ from .utils import k_center_euclidean_dist
 import numpy as np
 from sklearn.cluster import KMeans
 
+from visdom import Visdom
+viz = Visdom()
+
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
@@ -70,7 +73,7 @@ class Protonet(nn.Module):
         dists = k_center_euclidean_dist(zq, z_proto)
 
         #log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
-               
+        viz.text(str((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1)))       
         log_p_y = torch.log((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1))
         global reg
         if reg:
