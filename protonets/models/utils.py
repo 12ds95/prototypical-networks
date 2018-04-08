@@ -1,5 +1,6 @@
 import torch
-reg = True
+from visdom import Visdom
+viz = Visdom()
 def k_center_euclidean_dist(x, y):
     # x: N x D
     # y: M x K x D
@@ -11,4 +12,5 @@ def k_center_euclidean_dist(x, y):
     x = x.unsqueeze(1).expand(n, m, d).unsqueeze(2).expand(n, m, k, d)
     y = y.unsqueeze(0).expand(n, m, k, d)
     ret = torch.exp(-0.5 * (torch.pow(x - y, 2).sum(3))).sum(2)
+    viz.text("ret<br>"+str(ret).replace("\n", "<br>"))
     return ret
