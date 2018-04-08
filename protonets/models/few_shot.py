@@ -20,7 +20,7 @@ class Flatten(nn.Module):
 
     def forward(self, x):
         return x.view(x.size(0), -1)
-reg = True
+
 class Protonet(nn.Module):
     def __init__(self, encoder):
         super(Protonet, self).__init__()
@@ -30,7 +30,8 @@ class Protonet(nn.Module):
     def loss(self, sample):
         xs = Variable(sample['xs']) # support
         xq = Variable(sample['xq']) # query
-
+        print("support", xs.data().size())
+        print("query", xq.data().size())
         n_class = xs.size(0)
         assert xq.size(0) == n_class
         n_support = xs.size(1)
@@ -73,7 +74,7 @@ class Protonet(nn.Module):
         dists = k_center_euclidean_dist(zq, z_proto)
 
         #log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
-        viz.text(str((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1)))       
+        #viz.text(str((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1)))       
         log_p_y = torch.log((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1))
         global reg
         if reg:
