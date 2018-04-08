@@ -12,6 +12,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from visdom import Visdom
+from torchvision.utils import make_grid
 viz = Visdom()
 
 class Flatten(nn.Module):
@@ -30,8 +31,9 @@ class Protonet(nn.Module):
     def loss(self, sample):
         xs = Variable(sample['xs']) # support
         xq = Variable(sample['xq']) # query
-        print("support", xs.data().size())
-        print("query", xq.data().size())
+        # for cs in xs:
+        #     viz.image(make_grid(cs.data,padding=10).numpy())
+        # viz.text("support " + str(xs.size()) + "query " +  str(xq.size()))
         n_class = xs.size(0)
         assert xq.size(0) == n_class
         n_support = xs.size(1)
@@ -56,6 +58,7 @@ class Protonet(nn.Module):
             input: 
             output: (n_class, k_centroid, z_dim)
             """
+            viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
             centroids = []
             for i in range(n_class):
                 X = xs[i * n_support:(i+1) * n_support].data.cpu().numpy()
@@ -65,6 +68,7 @@ class Protonet(nn.Module):
                     kmeans = [X]
                 centroids.append(kmeans)
             centroids = Variable(torch.from_numpy(np.array(centroids)))
+            viz.text("centroid<br>"+str(centroids).replace("\n", "<br>"))
             if xq.is_cuda:
                 centroids = centroids.cuda()
             return centroids
@@ -76,9 +80,6 @@ class Protonet(nn.Module):
         #log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
         #viz.text(str((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1)))       
         log_p_y = torch.log((dists.div(dists.sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1))
-        global reg
-        if reg:
-            reg = False
         #assert log_p_y_1.size() == log_p_y.size()
 
         #gather像是在某个维度选出一些来
