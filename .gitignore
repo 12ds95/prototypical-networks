@@ -9,4 +9,3 @@ build
 .DS_Store
 scripts/predict/few_shot/protonets
 scripts/train/few_shot/protonets
-*.sh
