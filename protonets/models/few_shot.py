@@ -51,6 +51,7 @@ class Protonet(nn.Module):
 
         z = self.encoder.forward(x)
         z_dim = z.size(-1)
+        viz.text("z<br>"+str(z).replace("\n", "<br>"))
         # z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         def select_centroids(xs):
             """ 
@@ -58,7 +59,7 @@ class Protonet(nn.Module):
             input: 
             output: (n_class, k_centroid, z_dim)
             """
-            viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
+            # viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
             centroids = []
             for i in range(n_class):
                 X = xs[i * n_support:(i+1) * n_support].data.cpu().numpy()
@@ -67,7 +68,7 @@ class Protonet(nn.Module):
                 else:
                     kmeans = [X]
                 centroids.append(kmeans)
-            centroids = Variable(torch.from_numpy(np.array(centroids)))
+            # centroids = Variable(torch.from_numpy(np.array(centroids)))
             viz.text("centroid<br>"+str(centroids).replace("\n", "<br>"))
             if xq.is_cuda:
                 centroids = centroids.cuda()
