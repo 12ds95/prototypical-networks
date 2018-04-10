@@ -157,7 +157,10 @@ class Protonet(nn.Module):
         #         pickle.dump(target_inds, handle)            
         #     REG = False
         dived = dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size())
-        dived = torch.max(dived, 1e-20*Variable(torch.ones(dived.size())))
+        nanFilter = 1e-20*Variable(torch.ones(dived.size()))
+        if xq.is_cuda:
+            nanFilter = nanFilter.cuda()
+        dived = torch.max(dived, nanFilter)
         log_p_y = torch.log((dists.add(1e-27).div(dived).add(1e-27)).contiguous().view(n_class, n_query, -1))        
         
         # grad = torch.zeros(log_p_y.size())
