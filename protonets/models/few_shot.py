@@ -72,9 +72,9 @@ class Protonet(nn.Module):
         # viz.image(make_grid(weights[0].data,padding=10).numpy())
         # for g in grad:
         #     viz.text(str(g).replace("\n", "<br>"))
-        for w in weights:
-            viz.text(str(w).replace("\n", "<br>"))
-            break
+        # for w in weights:
+        #     viz.text(str(w).replace("\n", "<br>"))
+        #     break
 ####################################################
         # s = []
         # for k, v in params.items():
