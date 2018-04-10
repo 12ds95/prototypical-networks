@@ -53,23 +53,23 @@ class Protonet(nn.Module):
         z_dim = z.size(-1)
 
 ####################################################
-        grad = []
-        weights = []
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                grad.append(torch.zeros(m.weight.size()))
-                weights.append(torch.zeros(m.weight.size()))
-        i = 0
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                def wrapper(idx):
-                    def extract(var):
-                        grad[idx] = var
-                    return extract
-                m.weight.register_hook(wrapper(i))
-                weights[i] = m.weight
-                i += 1
-        viz.image(make_grid(weights[0].data,padding=10).numpy())
+        # grad = []
+        # weights = []
+        # for m in self.modules():
+        #     if isinstance(m, nn.Conv2d):
+        #         grad.append(torch.zeros(m.weight.size()))
+        #         weights.append(torch.zeros(m.weight.size()))
+        # i = 0
+        # for m in self.modules():
+        #     if isinstance(m, nn.Conv2d):
+        #         def wrapper(idx):
+        #             def extract(var):
+        #                 grad[idx] = var
+        #             return extract
+        #         m.weight.register_hook(wrapper(i))
+        #         weights[i] = m.weight
+        #         i += 1
+        # viz.image(make_grid(weights[0].data,padding=10).numpy())
         # for g in grad:
         #     viz.text(str(g).replace("\n", "<br>"))
         # for w in weights:
@@ -144,18 +144,18 @@ class Protonet(nn.Module):
 #################################################### 
         # viz.text(str((dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).replace("\n", "<br>"))
         # viz.text(str((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).add(1e-27).view(n_class, n_query, -1)).replace("\n", "<br>"))       
-        global REG
-        if REG:
-            import pickle
-            with open("z_proto.pkl", "wb") as handle:
-                pickle.dump(z_proto, handle)
-            with open("zq.pkl", "wb") as handle:
-                pickle.dump(zq, handle)           
-            with open("dists.pkl", "wb") as handle:
-                pickle.dump((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1), handle)
-            with open("target_inds.pkl", "wb") as handle:
-                pickle.dump(target_inds, handle)            
-            REG = False
+        # global REG
+        # if REG:
+        #     import pickle
+        #     with open("z_proto.pkl", "wb") as handle:
+        #         pickle.dump(z_proto, handle)
+        #     with open("zq.pkl", "wb") as handle:
+        #         pickle.dump(zq, handle)           
+        #     with open("dists.pkl", "wb") as handle:
+        #         pickle.dump((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1), handle)
+        #     with open("target_inds.pkl", "wb") as handle:
+        #         pickle.dump(target_inds, handle)            
+        #     REG = False
         
         log_p_y = torch.log((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).add(1e-27).contiguous().view(n_class, n_query, -1))        
         
