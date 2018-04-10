@@ -53,22 +53,22 @@ class Protonet(nn.Module):
         z_dim = z.size(-1)
 
 ####################################################
-        grad = []
-        weights = []
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                grad.append(torch.zeros(m.weight.size()))
-                weights.append(torch.zeros(m.weight.size()))
-        i = 0
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                def wrapper(idx):
-                    def extract(var):
-                        grad[idx] = var
-                    return extract
-                m.weight.register_hook(wrapper(i))
-                weights[i] = m.weight
-                i += 1
+        # grad = []
+        # weights = []
+        # for m in self.modules():
+        #     if isinstance(m, nn.Conv2d):
+        #         grad.append(torch.zeros(m.weight.size()))
+        #         weights.append(torch.zeros(m.weight.size()))
+        # i = 0
+        # for m in self.modules():
+        #     if isinstance(m, nn.Conv2d):
+        #         def wrapper(idx):
+        #             def extract(var):
+        #                 grad[idx] = var
+        #             return extract
+        #         m.weight.register_hook(wrapper(i))
+        #         weights[i] = m.weight
+        #         i += 1
         # viz.image(make_grid(weights[0].data,padding=10).numpy())
         # for g in grad:
         #     viz.text(str(g).replace("\n", "<br>"))
