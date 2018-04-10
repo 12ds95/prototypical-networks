@@ -17,6 +17,8 @@ import protonets.utils.data as data_utils
 import protonets.utils.model as model_utils
 import protonets.utils.log as log_utils
 
+from visdom import Visdom
+viz = Visdom()
 #设置了state的回调方法?hook钩子，有点前端的感觉
 
 def main(opt):

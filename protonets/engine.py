@@ -42,7 +42,7 @@ class Engine(object):
                 loss, state['output'] = state['model'].loss(state['sample'])
                 #on_forward???
                 self.hooks['on_forward'](state)
-
+                
                 loss.backward()
                 #on_backward???
                 self.hooks['on_backward'](state)

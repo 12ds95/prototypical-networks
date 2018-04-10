@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from visdom import Visdom
 from torchvision.utils import make_grid
 viz = Visdom()
-
+REG = True
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
@@ -51,12 +51,43 @@ class Protonet(nn.Module):
 
         z = self.encoder.forward(x)
         z_dim = z.size(-1)
+
+####################################################
+        grad = []
+        weights = []
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                grad.append(torch.zeros(m.weight.size()))
+                weights.append(torch.zeros(m.weight.size()))
+        i = 0
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                def wrapper(idx):
+                    def extract(var):
+                        grad[idx] = var
+                    return extract
+                m.weight.register_hook(wrapper(i))
+                weights[i] = m.weight
+                i += 1
+        viz.image(make_grid(weights[0].data,padding=10).numpy())
+        # for g in grad:
+        #     viz.text(str(g).replace("\n", "<br>"))
+        # for w in weights:
+        #     viz.text(str(w).replace("\n", "<br>"))
+
+####################################################
+        # s = []
+        # for k, v in params.items():
+        #     s.append(str(k)+"<br>")
+        # viz.text(s)
+####################################################
         # def get_image_input_hook(self, input, output):
         #     viz.text("input: %s, output %s" % (str(input[0].data.size()), str(output.data.size())))
         # self.encoder[0].register_forward_hook(get_image_input_hook)
         # self.encoder[1].register_forward_hook(get_image_input_hook)
         # self.encoder[2].register_forward_hook(get_image_input_hook)
         # self.encoder[3].register_forward_hook(get_image_input_hook)
+####################################################        
         # viz.text("z<br>"+str(z).replace("\n", "<br>"))
         # z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         def select_centroids(xs):
@@ -66,18 +97,42 @@ class Protonet(nn.Module):
             output: (n_class, k_centroid, z_dim)
             """
             # viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
-            centroids = []
+            centroids = None
+            nClusters = 2
             for i in range(n_class):
-                X = xs[i * n_support:(i+1) * n_support].data.cpu().numpy()
-                if n_support // 2:
-                    kmeans = KMeans(n_clusters=2, max_iter=1, random_state=0).fit(X).cluster_centers_
+                X = xs[i * n_support:(i+1) * n_support]                
+                if n_support != 1:
+                    kmeans = KMeans(n_clusters=nClusters, max_iter=1, random_state=0).fit(X.data.cpu().numpy())
+                    c0idxs = np.where(kmeans.labels_ == 0)
+                    c1idxs = np.where(kmeans.labels_ == 1)                   
+                    if len(c0idxs[0]) == 0:
+                        gradCenter = X[c1idxs].contiguous().view(1, len(c1idxs[0]), z_dim).mean(1)
+                        if np.array_equal(gradCenter.data.cpu().numpy(), kmeans.cluster_centers_[0]):
+                            randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[1])).view(1, z_dim)
+                        else:
+                            randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[0])).view(1, z_dim)
+                        kmeans = torch.cat((randCenter, gradCenter), 0) 
+                    elif len(c1idxs[0]) == 0:
+                        gradCenter = X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1)                        
+                        if np.array_equal(gradCenter.data.cpu().numpy(), kmeans.cluster_centers_[0]):
+                            randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[1])).view(1, z_dim)
+                        else:
+                            randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[0])).view(1, z_dim)
+                        kmeans = torch.cat((randCenter, gradCenter), 0)
+                    else:
+                        kmeans = torch.cat((X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1), 
+                            X[c1idxs].contiguous().view(1, len(c1idxs[0]), z_dim).mean(1)), 0)
                 else:
-                    kmeans = [X]
-                centroids.append(kmeans)
-            centroids = Variable(torch.from_numpy(np.array(centroids)))
+                    nClusters = 1
+                    kmeans = X.view(n_support, z_dim)
+                if centroids is None:
+                    centroids = kmeans.view(1, nClusters, z_dim)
+                else:
+                    centroids = torch.cat((centroids, kmeans.view(1, nClusters, z_dim)), 0)
             # viz.text("centroid<br>"+str(centroids).replace("\n", "<br>"))
-            if xq.is_cuda:
-                centroids = centroids.cuda()
+            # if xq.is_cuda:
+            #     centroids = centroids.cuda()
+            # viz.text("centroids<br>"+str(centroids).replace("\n", "<br>"))
             return centroids
         
         z_proto = select_centroids(z[:n_class*n_support])
@@ -85,17 +140,41 @@ class Protonet(nn.Module):
         dists = k_center_euclidean_dist(zq, z_proto)
 
         # log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
-        # viz.text(str((dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).replace("\n", "<br>"))
-        # viz.text(str((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1)).replace("\n", "<br>"))       
-        log_p_y = torch.log((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).contiguous().view(n_class, n_query, -1))
         # assert log_p_y_1.size() == log_p_y.size()
+#################################################### 
+        # viz.text(str((dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).replace("\n", "<br>"))
+        # viz.text(str((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).add(1e-27).view(n_class, n_query, -1)).replace("\n", "<br>"))       
+        global REG
+        if REG:
+            import pickle
+            with open("z_proto.pkl", "wb") as handle:
+                pickle.dump(z_proto, handle)
+            with open("zq.pkl", "wb") as handle:
+                pickle.dump(zq, handle)           
+            with open("dists.pkl", "wb") as handle:
+                pickle.dump((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).view(n_class, n_query, -1), handle)
+            with open("target_inds.pkl", "wb") as handle:
+                pickle.dump(target_inds, handle)            
+            REG = False
+        
+        log_p_y = torch.log((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).add(1e-27).contiguous().view(n_class, n_query, -1))        
+        
+        # grad = torch.zeros(log_p_y.size())
+        # def extract(var):
+        #     grad = var
+        # log_p_y.register_hook(extract)
+        # viz.text(str(log_p_y).replace("\n", "<br>"))
+        # viz.text(str(grad).replace("\n", "<br>"))
+#################################################### 
+        
 
         # gather像是在某个维度选出一些来
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
-
+        # viz.text(str(loss_val).replace("\n", "<br>"))
         _, y_hat = log_p_y.max(2)
         acc_val = torch.eq(y_hat, target_inds.squeeze()).float().mean()
 
+        
         return loss_val, {
             'loss': loss_val.data[0],
             'acc': acc_val.data[0]
