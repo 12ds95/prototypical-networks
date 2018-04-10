@@ -53,28 +53,28 @@ class Protonet(nn.Module):
         z_dim = z.size(-1)
 
 ####################################################
-        # grad = []
-        # weights = []
-        # for m in self.modules():
-        #     if isinstance(m, nn.Conv2d):
-        #         grad.append(torch.zeros(m.weight.size()))
-        #         weights.append(torch.zeros(m.weight.size()))
-        # i = 0
-        # for m in self.modules():
-        #     if isinstance(m, nn.Conv2d):
-        #         def wrapper(idx):
-        #             def extract(var):
-        #                 grad[idx] = var
-        #             return extract
-        #         m.weight.register_hook(wrapper(i))
-        #         weights[i] = m.weight
-        #         i += 1
+        grad = []
+        weights = []
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                grad.append(torch.zeros(m.weight.size()))
+                weights.append(torch.zeros(m.weight.size()))
+        i = 0
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                def wrapper(idx):
+                    def extract(var):
+                        grad[idx] = var
+                    return extract
+                m.weight.register_hook(wrapper(i))
+                weights[i] = m.weight
+                i += 1
         # viz.image(make_grid(weights[0].data,padding=10).numpy())
         # for g in grad:
         #     viz.text(str(g).replace("\n", "<br>"))
-        # for w in weights:
-        #     viz.text(str(w).replace("\n", "<br>"))
-
+        for w in weights:
+            viz.text(str(w).replace("\n", "<br>"))
+            break
 ####################################################
         # s = []
         # for k, v in params.items():
@@ -96,7 +96,7 @@ class Protonet(nn.Module):
             input: 
             output: (n_class, k_centroid, z_dim)
             """
-            viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
+            # viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
             centroids = None
             nClusters = 2
             for i in range(n_class):
@@ -156,8 +156,9 @@ class Protonet(nn.Module):
         #     with open("target_inds.pkl", "wb") as handle:
         #         pickle.dump(target_inds, handle)            
         #     REG = False
-        
-        log_p_y = torch.log((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).add(1e-27).contiguous().view(n_class, n_query, -1))        
+        dived = dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size())
+        dived = torch.max(dived, 1e-20*Variable(torch.ones(dived.size())))
+        log_p_y = torch.log((dists.add(1e-27).div(dived).add(1e-27)).contiguous().view(n_class, n_query, -1))        
         
         # grad = torch.zeros(log_p_y.size())
         # def extract(var):
@@ -188,31 +189,33 @@ def load_protonet_conv(**kwargs):
     z_dim = kwargs['z_dim']
 
     def conv_block(in_channels, out_channels):
-        return nn.Sequential(
+        block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
+        torch.nn.init.kaiming_normal(block[0].weight)
+        return block
 
-    if x_dim[0] != 3:
+    if x_dim[0]:
         encoder = nn.Sequential(
             conv_block(x_dim[0], hid_dim),
-            conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, z_dim),
             Flatten()
         )
-    else:
-        encoder = nn.Sequential(
-            conv_block(x_dim[0], hid_dim),
-            conv_block(hid_dim, hid_dim),
-            conv_block(hid_dim, hid_dim),
-            conv_block(hid_dim, hid_dim),
-            conv_block(hid_dim, z_dim),
-            Flatten(),
-            nn.Linear(256, 128),
-            nn.BatchNorm1d(128)
-        )
+
+    # else:
+    #     encoder = nn.Sequential(
+    #         conv_block(x_dim[0], hid_dim),
+    #         conv_block(hid_dim, hid_dim),
+    #         conv_block(hid_dim, hid_dim),
+    #         conv_block(hid_dim, hid_dim),
+    #         conv_block(hid_dim, z_dim),
+    #         Flatten(),
+    #         nn.Linear(256, 128),
+    #         nn.BatchNorm1d(128)
+    #     )
     return Protonet(encoder)
