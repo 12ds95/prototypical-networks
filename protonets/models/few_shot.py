@@ -192,14 +192,13 @@ def load_protonet_conv(**kwargs):
     z_dim = kwargs['z_dim']
 
     def conv_block(in_channels, out_channels):
-        block = nn.Sequential(
+        return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
-        torch.nn.init.kaiming_normal(block[0].weight)
-        return block
+        
 
     if x_dim[0]:
         encoder = nn.Sequential(
