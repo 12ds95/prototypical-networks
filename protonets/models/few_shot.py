@@ -201,24 +201,22 @@ def load_protonet_conv(**kwargs):
         torch.nn.init.kaiming_normal(block[0].weight)
         return block
 
-    if x_dim[0]:
+    if x_dim[0] == 3:
+        encoder = nn.Sequential(
+            conv_block(x_dim[0], hid_dim),
+            conv_block(hid_dim, hid_dim),
+            conv_block(hid_dim, hid_dim),
+            conv_block(hid_dim, hid_dim),        
+            conv_block(hid_dim, z_dim),
+            Flatten()
+        )
+    else:
         encoder = nn.Sequential(
             conv_block(x_dim[0], hid_dim),
             conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, z_dim),
-            Flatten()
+            Flatten(),
         )
 
-    # else:
-    #     encoder = nn.Sequential(
-    #         conv_block(x_dim[0], hid_dim),
-    #         conv_block(hid_dim, hid_dim),
-    #         conv_block(hid_dim, hid_dim),
-    #         conv_block(hid_dim, hid_dim),
-    #         conv_block(hid_dim, z_dim),
-    #         Flatten(),
-    #         nn.Linear(256, 128),
-    #         nn.BatchNorm1d(128)
-    #     )
     return Protonet(encoder)
