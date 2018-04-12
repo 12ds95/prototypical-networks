@@ -21,26 +21,34 @@ def plotTwoLine(layout):
     """
 
     """
-    win = viz.line(
-            X=np.column_stack((np.linspace(0, 0, 10), np.linspace(0, 0, 10))),
-            Y=np.column_stack((np.linspace(0, 0, 10),
-            np.linspace(0, 0, 10))),
-            opts=layout
-        )
+    win = None
     prevX = 0
     prevYa = 0
     prevYb = 0
     
     def update_plotTwoLine(x, ya, yb):
-        def update(win):
-            viz.line(
-                X=np.column_stack((np.linspace(prevX, x, 10), np.linspace(prevX, x, 10))),
-                Y=np.column_stack((np.linspace(prevYa, ya, 10),
+        
+        def update():
+            nonlocal prevX, prevYa, prevYb, win
+            if win is None:
+                prevX = x
+                prevYa = ya
+                prevYb = yb
+                win = viz.line(
+                    X=np.column_stack((np.linspace(prevX, x, 10), np.linspace(prevX, x, 10))),
+                    Y=np.column_stack((np.linspace(prevYa, ya, 10),
                         np.linspace(prevYb, yb, 10))),
-                win=win,
-                update='append'
-            )    
-        update(win)
+                    opts=layout
+                )
+            else:
+                viz.line(
+                    X=np.column_stack((np.linspace(prevX, x, 10), np.linspace(prevX, x, 10))),
+                    Y=np.column_stack((np.linspace(prevYa, ya, 10),
+                            np.linspace(prevYb, yb, 10))),
+                    win=win,
+                    update='append'
+                )    
+        update()
         nonlocal prevX, prevYa, prevYb
         prevX = x
         prevYa = ya
