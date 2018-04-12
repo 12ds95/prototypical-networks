@@ -16,6 +16,7 @@ from protonets.engine import Engine
 import protonets.utils.data as data_utils
 import protonets.utils.model as model_utils
 import protonets.utils.log as log_utils
+import protonets.utils.visual as visual_utils
 
 from visdom import Visdom
 viz = Visdom()
@@ -87,6 +88,9 @@ def main(opt):
     engine.hooks['on_update'] = on_update
     
     #一个epoch结束时判断训练效果，以及是否结束训练(patience?为什么不用loss的改变?看了实际训练貌似loss变化挺大的)
+    title = '%i_%iw_%is'%(opt['data.way'], opt['data.test_way'], opt['data.test_way'])
+    lossPic = visual_utils.train_val_loss(title)
+    accPic = visual_utils.train_val_acc(title)
     def on_end_epoch(hook_state, state):
         if val_loader is not None:
             if 'best_loss' not in hook_state:
@@ -101,6 +105,8 @@ def main(opt):
                                  desc="Epoch {:d} valid".format(state['epoch']))
 
         meter_vals = log_utils.extract_meter_values(meters)
+        lossPic(state['epoch'], meter_vals['train']['loss'], meter_vals['val']['loss'])
+        accPic(state['epoch'], meter_vals['train']['acc'], meter_vals['val']['acc'])
         print("Epoch {:02d}: {:s}".format(state['epoch'], log_utils.render_meter_values(meter_vals)))
         meter_vals['epoch'] = state['epoch']
         with open(trace_file, 'a') as f:

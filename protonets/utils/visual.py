@@ -3,68 +3,54 @@ import numpy as np
 
 viz = Visdom()
 
-def train_val_acc(layout):
+def train_val_acc(title):
     """
 
     """
-    win = create
-    def update_train_val_acc(epoch, trainAcc, valAcc):
-        update(win, 'train', epoch, trainAcc)
-        update(win, 'val', epoch, valAcc)
-    return update_train_val_acc
+    layout = dict(legend=['train', 'val'], title=title+" Acc Plot")
+    return plotTwoLine(layout)
 
-def train_val_loss(epoch, trainLoss, valLoss, layout):
+def train_val_loss(title):
     """
     
     """
-    pass
+    layout = dict(legend=['train', 'val'], title=title+" Loss Plot")
+    return plotTwoLine(layout)
 
-def create():
-    win = viz
-    return win
+def plotTwoLine(layout):
+    """
 
-def update(win, line, x, y):
-    pass
+    """
+    win = viz.line(
+            X=np.column_stack((np.linspace(0, 0, 10), np.linspace(0, 0, 10))),
+            Y=np.column_stack((np.linspace(0, 0, 10),
+            np.linspace(0, 0, 10))),
+            opts=layout
+        )
+    prevX = 0
+    prevYa = 0
+    prevYb = 0
+    
+    def update_plotTwoLine(x, ya, yb):
+        def update(win):
+            viz.line(
+                X=np.column_stack((np.linspace(prevX, x, 10), np.linspace(prevX, x, 10))),
+                Y=np.column_stack((np.linspace(prevYa, ya, 10),
+                        np.linspace(prevYb, yb, 10))),
+                win=win,
+                update='append'
+            )    
+        update(win)
+        nonlocal prevX, prevYa, prevYb
+        prevX = x
+        prevYa = ya
+        prevYb = yb
+        
+    return update_plotTwoLine
 
-# line updates
-from time import sleep
-win = viz.line(
-    X=np.column_stack((np.arange(0, 10), np.arange(0, 10))),
-    Y=np.column_stack((np.linspace(5, 10, 10),
-                        np.linspace(5, 10, 10) + 5)),
-)
-sleep(1)
-viz.line(
-    X=np.column_stack((np.arange(10, 20), np.arange(10, 20))),
-    Y=np.column_stack((np.linspace(5, 10, 10),
-                        np.linspace(5, 10, 10) + 5)),
-    win=win,
-    update='append'
-)
-sleep(1)
-viz.line(
-    X=np.arange(21, 30),
-    Y=np.arange(1, 10),
-    win=win,
-    name='2',
-    update='append'
-)
-sleep(1)
-viz.line(
-    X=np.arange(1, 10),
-    Y=np.arange(11, 20),
-    win=win,
-    name='delete this',
-    update='append'
-)
-sleep(1)
-viz.line(
-    X=np.arange(1, 10),
-    Y=np.arange(11, 20),
-    win=win,
-    name='4',
-    update='insert'
-)
-sleep(1)
-viz.line(X=None, Y=None, win=win, name='delete this', update='remove')
-input('Waiting for callbacks')
+if __name__ == '__main__':
+    from time import sleep
+    pic = train_val_acc("First Plot")
+    pic(1, 0.5, 0.1)
+    sleep(1)
+    pic(2, 0.2, 0.3)
