@@ -9,3 +9,5 @@ build
 .DS_Store
 scripts/predict/few_shot/protonets
 scripts/train/few_shot/protonets
+scripts/predict/few_shot/data
+scripts/train/few_shot/data
