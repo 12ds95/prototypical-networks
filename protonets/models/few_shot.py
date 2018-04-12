@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 from protonets.models import register_model
 
-from .utils import k_center_euclidean_dist
+from .utils import k_center_euclidean_dist, euclidean_dist
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -33,6 +33,7 @@ class Protonet(nn.Module):
         xq = Variable(sample['xq']) # query
         # for cs in xs:
         #     viz.image(make_grid(cs.data,padding=10).numpy())
+        #     break
         # viz.text("support " + str(xs.size()) + "query " +  str(xq.size()))
         n_class = xs.size(0)
         assert xq.size(0) == n_class
@@ -89,7 +90,14 @@ class Protonet(nn.Module):
         # self.encoder[3].register_forward_hook(get_image_input_hook)
 ####################################################        
         # viz.text("z<br>"+str(z).replace("\n", "<br>"))
+        zq = z[n_class*n_support:]
+        
         # z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
+        
+        # dists = euclidean_dist(zq, z_proto)
+        # log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
+        # viz.text("log_p_y_1<br>"+str(log_p_y_1).replace("\n", "<br>"))
+        
         def select_centroids(xs):
             """ 
             Select k centroids for each class
@@ -98,10 +106,10 @@ class Protonet(nn.Module):
             """
             # viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
             centroids = None
-            nClusters = 2
+            nClusters = 1
             for i in range(n_class):
                 X = xs[i * n_support:(i+1) * n_support]                
-                if n_support != 1:
+                if nClusters != 1:
                     kmeans = KMeans(n_clusters=nClusters, max_iter=1, random_state=0).fit(X.data.cpu().numpy())
                     c0idxs = np.where(kmeans.labels_ == 0)
                     c1idxs = np.where(kmeans.labels_ == 1)                   
@@ -111,6 +119,8 @@ class Protonet(nn.Module):
                             randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[1])).view(1, z_dim)
                         else:
                             randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[0])).view(1, z_dim)
+                        if xq.is_cuda:
+                            randCenter = randCenter.cuda()
                         kmeans = torch.cat((randCenter, gradCenter), 0) 
                     elif len(c1idxs[0]) == 0:
                         gradCenter = X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1)                        
@@ -118,13 +128,17 @@ class Protonet(nn.Module):
                             randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[1])).view(1, z_dim)
                         else:
                             randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[0])).view(1, z_dim)
+                        if xq.is_cuda:
+                            randCenter = randCenter.cuda()                        
                         kmeans = torch.cat((randCenter, gradCenter), 0)
                     else:
                         kmeans = torch.cat((X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1), 
                             X[c1idxs].contiguous().view(1, len(c1idxs[0]), z_dim).mean(1)), 0)
                 else:
-                    nClusters = 1
-                    kmeans = X.view(n_support, z_dim)
+                    kmeans = KMeans(n_clusters=nClusters, max_iter=1, random_state=0).fit(X.data.cpu().numpy())
+                    c0idxs = np.where(kmeans.labels_ == 0)
+                    kmeans = X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1)
+                    # kmeans = X.view(1, n_support, z_dim).mean(1)
                 if centroids is None:
                     centroids = kmeans.view(1, nClusters, z_dim)
                 else:
@@ -136,8 +150,17 @@ class Protonet(nn.Module):
             return centroids
         
         z_proto = select_centroids(z[:n_class*n_support])
-        zq = z[n_class*n_support:]
+        
         dists = k_center_euclidean_dist(zq, z_proto)
+        
+        #为log_softmax做优化准备: 减去最小数
+        #Pick min num in each row (N x M x K) -> (N)  
+        minx = torch.min(torch.min(dists.detach(), 1)[0], 1)[0]
+        minx = minx.unsqueeze(1).unsqueeze(2).expand(*dists.size())
+        # viz.text("minx<br>"+str(minx).replace("\n", "<br>"))
+        # viz.text("dists<br>"+str(dists).replace("\n", "<br>"))
+        dists = torch.exp(-dists.sub(minx).sum(2))
+
 
         # log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
         # assert log_p_y_1.size() == log_p_y.size()
@@ -155,14 +178,13 @@ class Protonet(nn.Module):
         #         pickle.dump(target_inds, handle)            
         #     REG = False
         dived = dists.sum(1).unsqueeze(1).expand(*dists.size())
-        nanFilter = 5*1e-20*Variable(torch.ones(dived.size()))
-        if xq.is_cuda:
-            nanFilter = nanFilter.cuda()
-        dived = torch.max(dived, nanFilter)
-        # viz.text(str(dived).replace("\n", "<br>"))
-        viz.text(str((dists.add(1e-20).div(dived)).add(1e-27)).replace("\n", "<br>"))
-        log_p_y = torch.log((dists.add(1e-20).div(dived).add(1e-27)).contiguous().view(n_class, n_query, -1))        
-        
+        # nanFilter = 5*1e-20*Variable(torch.ones(dived.size()))
+        # if xq.is_cuda:
+        #     nanFilter = nanFilter.cuda()
+        # dived = torch.max(dived, nanFilter)
+        # log_p_y = torch.log((dists.add(1e-20).div(dived)).contiguous().view(n_class, n_query, -1))        
+        log_p_y = torch.log((dists.div(dived).add(1e-35)).contiguous().view(n_class, n_query, -1))
+        # viz.text("log_p_y<br>"+str(log_p_y).replace("\n", "<br>"))
         # grad = torch.zeros(log_p_y.size())
         # def extract(var):
         #     grad = var
@@ -205,11 +227,9 @@ def load_protonet_conv(**kwargs):
         encoder = nn.Sequential(
             conv_block(x_dim[0], hid_dim),
             conv_block(hid_dim, hid_dim),
-            conv_block(hid_dim, hid_dim),        
+            conv_block(hid_dim, hid_dim), 
             conv_block(hid_dim, z_dim),
-            Flatten(),
-            nn.Linear(1600, 512),
-            nn.BatchNorm1d(512)
+            Flatten()
         )
     else:
         encoder = nn.Sequential(
