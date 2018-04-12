@@ -141,9 +141,7 @@ class Protonet(nn.Module):
 
         # log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
         # assert log_p_y_1.size() == log_p_y.size()
-#################################################### 
-        # viz.text(str((dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).replace("\n", "<br>"))
-        # viz.text(str((dists.add(1e-27).div(dists.add(1e-27).sum(1).unsqueeze(1).expand(*dists.size()))).add(1e-27).view(n_class, n_query, -1)).replace("\n", "<br>"))       
+####################################################        
         # global REG
         # if REG:
         #     import pickle
@@ -161,7 +159,9 @@ class Protonet(nn.Module):
         if xq.is_cuda:
             nanFilter = nanFilter.cuda()
         dived = torch.max(dived, nanFilter)
-        log_p_y = torch.log((dists.add(1e-20).div(dived).add(1e-20)).contiguous().view(n_class, n_query, -1))        
+        # viz.text(str(dived).replace("\n", "<br>"))
+        viz.text(str((dists.add(1e-20).div(dived)).add(1e-27)).replace("\n", "<br>"))
+        log_p_y = torch.log((dists.add(1e-20).div(dived).add(1e-27)).contiguous().view(n_class, n_query, -1))        
         
         # grad = torch.zeros(log_p_y.size())
         # def extract(var):
@@ -205,10 +205,11 @@ def load_protonet_conv(**kwargs):
         encoder = nn.Sequential(
             conv_block(x_dim[0], hid_dim),
             conv_block(hid_dim, hid_dim),
-            conv_block(hid_dim, hid_dim),
             conv_block(hid_dim, hid_dim),        
             conv_block(hid_dim, z_dim),
-            Flatten()
+            Flatten(),
+            nn.Linear(1600, 512),
+            nn.BatchNorm1d(512)
         )
     else:
         encoder = nn.Sequential(
