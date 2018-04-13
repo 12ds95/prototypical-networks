@@ -88,7 +88,8 @@ def main(opt):
     engine.hooks['on_update'] = on_update
     
     #一个epoch结束时判断训练效果，以及是否结束训练(patience?为什么不用loss的改变?看了实际训练貌似loss变化挺大的)
-    title = '%s: %i_%iw_%is'%(opt['data.dataset'], opt['data.way'], opt['data.test_way'], opt['data.test_shot'])
+    title = '%s, %s: %i_%iw_%is'%(opt['model.exp_name'], opt['data.dataset'], 
+        opt['data.way'], opt['data.test_way'], opt['data.test_shot'])
     lossPic = visual_utils.train_val_loss(title)
     accPic = visual_utils.train_val_acc(title)
     def on_end_epoch(hook_state, state):
@@ -103,7 +104,7 @@ def main(opt):
                                  val_loader,
                                  meters['val'],
                                  desc="Epoch {:d} valid".format(state['epoch']))
-
+ 
         meter_vals = log_utils.extract_meter_values(meters)
         lossPic(state['epoch'], meter_vals['train']['loss'], meter_vals['val']['loss'])
         accPic(state['epoch'], meter_vals['train']['acc'], meter_vals['val']['acc'])
