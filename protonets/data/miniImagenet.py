@@ -3,7 +3,7 @@ import sys
 import glob
 
 from functools import partial
-
+import pickle as pkl
 import numpy as np
 from PIL import Image
 
@@ -16,15 +16,27 @@ from torchnet.transform import compose
 import protonets
 from protonets.data.base import convert_dict, CudaTransform, EpisodicBatchSampler, SequentialBatchSampler
 
-OMNIGLOT_DATA_DIR  = os.path.join(os.path.dirname(__file__), '../../data/omniglot')
-OMNIGLOT_CACHE = { }
+# from visdom import Visdom
+# viz = Visdom()
+# REG = 1
 
-def load_image_path(key, out_field, d):
-    d[out_field] = Image.open(d[key])
+MINI_IMGNET_DATA_DIR  = os.path.join(os.path.dirname(__file__), '../../../data/mini_imagenet_split')
+MINI_IMGNET_CACHE = { }
+
+def load_image(dataset, key, out_field, d):
+    d[out_field] = Image.fromarray(dataset[d[key]])
+    # global REG
+    # REG += 1
+    # if REG==6:
+    #     viz.image(dataset[d[key]].transpose(2, 0, 1))
     return d
 
 def convert_tensor(key, d):
-    d[key] = 1.0 - torch.from_numpy(np.array(d[key], np.float32, copy=False)).transpose(0, 1).contiguous().view(1, d[key].size[0], d[key].size[1])
+    # tmp = np.array(d[key], np.float32, copy=True) / 255.0
+    d[key] = torch.from_numpy(np.array(d[key], np.float32, copy=False).transpose(2, 0, 1) / 255.0).contiguous().view(3, d[key].size[0], d[key].size[1])
+    # d[key] = torch.from_numpy(np.array(d[key], np.float32, copy=False) / 255.0).contiguous().view(3, d[key].size[0], d[key].size[1])
+    # if REG==6:
+    #     viz.image(d[key].numpy())
     return d
 
 def rotate_image(key, rot, d):
@@ -35,25 +47,22 @@ def scale_image(key, height, width, d):
     d[key] = d[key].resize((height, width))
     return d
 
-def load_class_images(d):
-    if d['class'] not in OMNIGLOT_CACHE:
-        alphabet, character, rot = d['class'].split('/')
-        image_dir = os.path.join(OMNIGLOT_DATA_DIR, 'data', alphabet, character)
-
-        image_ds = TransformDataset(ListDataset(sorted(glob.glob(os.path.join(image_dir, '*.png')))),
-                                    compose([partial(convert_dict, 'file_name'),
-                                             partial(load_image_path, 'file_name', 'data'),
-                                             partial(rotate_image, 'data', float(rot[3:])),
-                                             partial(scale_image, 'data', 28, 28),
+def load_class_images(dataset, index_set, d):
+    if d['class'] not in MINI_IMGNET_CACHE:
+        image_ds = TransformDataset(ListDataset(index_set[d['class']]),
+                                    compose([partial(convert_dict, 'img_idx'),
+                                             partial(load_image, dataset, 'img_idx', 'data'),
+                                             #partial(rotate_image, 'data', float(rot[3:])),
+                                             partial(scale_image, 'data', 84, 84),
                                              partial(convert_tensor, 'data')]))
 
         loader = torch.utils.data.DataLoader(image_ds, batch_size=len(image_ds), shuffle=False)
 
         for sample in loader:
-            OMNIGLOT_CACHE[d['class']] = sample['data']
+            MINI_IMGNET_CACHE[d['class']] = sample['data']
             break # only need one sample because batch size equal to dataset length
 
-    return { 'class': d['class'], 'data': OMNIGLOT_CACHE[d['class']] }
+    return { 'class': d['class'], 'data': MINI_IMGNET_CACHE[d['class']] }
 
 def extract_episode(n_support, n_query, d):
     # data: N x C x H x W
@@ -75,9 +84,14 @@ def extract_episode(n_support, n_query, d):
         'xq': xq
     }
 
-def load(opt, splits):
-    split_dir = os.path.join(OMNIGLOT_DATA_DIR, 'splits', opt['data.split'])
+def get_cache_path(split):
+    """Gets cache file name."""
+    cache_path = os.path.join(os.path.dirname(__file__), "../../../data/mini-imagenet/mini-imagenet-cache-" + split + ".pkl")
+    return cache_path
 
+def load(opt, splits):
+    split_dir = os.path.join(MINI_IMGNET_DATA_DIR, 'splits', opt['data.split'])
+    
     ret = { }
     for split in splits:
         if split in ['val', 'test'] and opt['data.test_way'] != 0:
@@ -100,18 +114,25 @@ def load(opt, splits):
         else:
             n_episodes = opt['data.train_episodes']
 
+        cache_path = get_cache_path(split)
+        if os.path.exists(cache_path):
+            with open(cache_path, "rb") as f:
+                try:
+                    data = pkl.load(f, encoding='bytes')
+                    img_data = data[b'image_data']
+                    class_dict = data[b'class_dict']
+                except:
+                    data = pkl.load(f)
+                    img_data = data['image_data']
+                    class_dict = data['class_dict']
+        
         transforms = [partial(convert_dict, 'class'),
-                      load_class_images,
+                      partial(load_class_images, img_data, class_dict),
                       partial(extract_episode, n_support, n_query)]
         if opt['data.cuda']:
             transforms.append(CudaTransform())
-
-        transforms = compose(transforms)
-
-        class_names = []
-        with open(os.path.join(split_dir, "{:s}.txt".format(split)), 'r') as f:
-            for class_name in f.readlines():
-                class_names.append(class_name.rstrip('\n'))
+        class_names = [key for key in class_dict]
+        transforms = compose(transforms)        
         ds = TransformDataset(ListDataset(class_names), transforms)
 
         if opt['data.sequential']:

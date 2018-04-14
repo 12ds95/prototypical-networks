@@ -2,6 +2,8 @@ import os
 import json
 import subprocess
 
+import sys
+
 from protonets.utils import format_opts, merge_dict
 from protonets.utils.log import load_trace
 

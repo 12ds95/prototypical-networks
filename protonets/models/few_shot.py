@@ -7,6 +7,8 @@ from torch.autograd import Variable
 from protonets.models import register_model
 
 from .utils import euclidean_dist
+from visdom import Visdom
+viz = Visdom()
 
 class Flatten(nn.Module):
     def __init__(self):
@@ -41,6 +43,7 @@ class Protonet(nn.Module):
                        xq.view(n_class * n_query, *xq.size()[2:])], 0)
 
         z = self.encoder.forward(x)
+        # viz.text("z<br>"+str(z).replace("\n", "<br>"))
         z_dim = z.size(-1)
 
         z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
