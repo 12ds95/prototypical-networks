@@ -33,6 +33,9 @@ parser.add_argument('--data.cuda', action='store_true', help="run in CUDA mode (
 
 # model args
 default_model_name = 'protonet_conv'
+exp_name = "multi-proto"
+parser.add_argument('--model.exp_name', type=str, default=exp_name, metavar='EXPNAME',
+                    help="exp name (default: {:s})".format(exp_name))
 parser.add_argument('--model.model_name', type=str, default=default_model_name, metavar='MODELNAME',
                     help="model name (default: {:s})".format(default_model_name))
 parser.add_argument('--model.x_dim', type=str, default='1,28,28', metavar='XDIM',
@@ -40,7 +43,7 @@ parser.add_argument('--model.x_dim', type=str, default='1,28,28', metavar='XDIM'
 parser.add_argument('--model.hid_dim', type=int, default=64, metavar='HIDDIM',
                     help="dimensionality of hidden layers (default: 64)")
 parser.add_argument('--model.z_dim', type=int, default=64, metavar='ZDIM',
-                    help="dimensionality of input images (default: 64)")
+                    help="dimensionality of output images (default: 64)")
 
 # train args
 parser.add_argument('--train.epochs', type=int, default=10000, metavar='NEPOCHS',
@@ -49,7 +52,7 @@ parser.add_argument('--train.optim_method', type=str, default='Adam', metavar='O
                     help='optimization method (default: Adam)')
 parser.add_argument('--train.learning_rate', type=float, default=0.001, metavar='LR',
                     help='learning rate (default: 0.0001)')
-parser.add_argument('--train.decay_every', type=int, default=20, metavar='LRDECAY',
+parser.add_argument('--train.decay_every', type=int, default=40, metavar='LRDECAY',
                     help='number of epochs after which to decay the learning rate')
 default_weight_decay = 0.0
 parser.add_argument('--train.weight_decay', type=float, default=default_weight_decay, metavar='WD',
