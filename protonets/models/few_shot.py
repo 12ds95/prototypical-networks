@@ -48,7 +48,8 @@ class Protonet(nn.Module):
         z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         zq = z[n_class*n_support:]
 
-        dists = euclidean_dist(zq, z_proto)
+        # dists = euclidean_dist(zq, z_proto)
+        # viz.text("dists_1<br>"+str(dists).replace("\n", "<br>")) 
         def learnedMetric(x, y):
             # x: N x D
             # y: M x D
@@ -68,6 +69,7 @@ class Protonet(nn.Module):
             return d.mm(self.learnedMetric).unsqueeze(1).bmm(d.unsqueeze(1).transpose(1, 2)).view(n, m)
         
         dists = learnedMetric(zq, z_proto)
+        # viz.text("dists_2<br>"+str(dists).replace("\n", "<br>")) 
         log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
 
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
@@ -104,5 +106,7 @@ def load_protonet_conv(**kwargs):
     n_2x2_MaxPool = 4
     w = pow(x_dim[1] // pow(2, n_2x2_MaxPool), 2) * z_dim
     # print(w)
-    learnedMetric = nn.Parameter(torch.rand(w, w))
+    # learnedMetric = nn.Parameter(torch.rand(w, w))
+    learnedMetric = nn.Parameter(torch.eye(w)*0.99 + 1e-9*torch.rand(w, w))
+    
     return Protonet(encoder, learnedMetric)
