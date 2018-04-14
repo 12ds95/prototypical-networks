@@ -33,7 +33,7 @@ parser.add_argument('--data.cuda', action='store_true', help="run in CUDA mode (
 
 # model args
 default_model_name = 'protonet_conv'
-exp_name = "proto"
+exp_name = "proto-learned-metric"
 parser.add_argument('--model.exp_name', type=str, default=exp_name, metavar='EXPNAME',
                     help="exp name (default: {:s})".format(exp_name))
 parser.add_argument('--model.model_name', type=str, default=default_model_name, metavar='MODELNAME',
