@@ -23,10 +23,11 @@ class Flatten(nn.Module):
         return x.view(x.size(0), -1)
 
 class Protonet(nn.Module):
-    def __init__(self, encoder):
+    def __init__(self, encoder, learnedMetric):
         super(Protonet, self).__init__()
         
         self.encoder = encoder
+        self.learnedMetric = learnedMetric
 
     def loss(self, sample):
         xs = Variable(sample['xs']) # support
@@ -110,7 +111,7 @@ class Protonet(nn.Module):
             for i in range(n_class):
                 X = xs[i * n_support:(i+1) * n_support]                
                 if nClusters != 1:
-                    kmeans = KMeans(n_clusters=nClusters, max_iter=1, random_state=0).fit(X.data.cpu().numpy())
+                    kmeans = KMeans(n_clusters=nClusters, max_iter=5, random_state=0).fit(X.data.cpu().numpy())
                     c0idxs = np.where(kmeans.labels_ == 0)
                     c1idxs = np.where(kmeans.labels_ == 1)                   
                     if len(c0idxs[0]) == 0:
@@ -151,8 +152,37 @@ class Protonet(nn.Module):
         
         z_proto = select_centroids(z[:n_class*n_support])
         
-        dists = k_center_euclidean_dist(zq, z_proto)
+        #dists = k_center_euclidean_dist(zq, z_proto)
         
+        def learnedMetric(x, y):
+            # x: N x D
+            # y: M x K x D
+            n = x.size(0)
+            m = y.size(0)
+            k = y.size(1)
+            d = x.size(1)
+            
+            assert d == y.size(2)
+            x = x.unsqueeze(1).expand(n, m, d).unsqueeze(2).expand(n, m, k, d)
+            y = y.unsqueeze(0).expand(n, m, k, d)
+            # viz.text("x_k<br>"+str(x).replace("\n", "<br>"))
+            # viz.text("y_k<br>"+str(y).replace("\n", "<br>"))
+            # dists = torch.pow(x - y, 2).sum(3)
+            # viz.text("dists_k<br>"+str(dists).replace("\n", "<br>"))
+            
+             # d: N x M x K x D -> (N * M * K) x D 
+            d = (x - y).view(n*m*k, d)
+            # let K = NxMxK,
+            # K x 1 x D bmm K x D x 1 => K x 1 x 1
+            # viz.text("metric<br>"+str(self.learnedMetric).replace("\n", "<br>")) 
+            return d.mm(self.learnedMetric).unsqueeze(1).bmm(d.unsqueeze(1).transpose(1, 2)).view(n, m, k)
+
+            # dists = torch.pow(x - y, 2).sum(3)
+            # # viz.text("dists_k<br>"+str(dists).replace("\n", "<br>"))
+            # # ret = torch.max(dists, 2)[0]
+            # return dists
+
+        dists = learnedMetric(zq, z_proto)
         #为log_softmax做优化准备: 减去最小数
         #Pick min num in each row (N x M x K) -> (N)  
         minx = torch.min(torch.min(dists.detach(), 1)[0], 1)[0]
@@ -239,5 +269,10 @@ def load_protonet_conv(**kwargs):
             conv_block(hid_dim, z_dim),
             Flatten(),
         )
-
-    return Protonet(encoder)
+    n_2x2_MaxPool = 4
+    w = pow(x_dim[1] // pow(2, n_2x2_MaxPool), 2) * z_dim
+    # print(w)
+    # learnedMetric = nn.Parameter(torch.rand(w, w))
+    learnedMetric = nn.Parameter(torch.eye(w) + torch.rand(w, w))
+    
+    return Protonet(encoder, learnedMetric)
