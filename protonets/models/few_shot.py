@@ -32,7 +32,6 @@ class Protonet(nn.Module):
         assert xq.size(0) == n_class
         n_support = xs.size(1)
         n_query = xq.size(1)
-
         target_inds = torch.arange(0, n_class).view(n_class, 1, 1).expand(n_class, n_query, 1).long()
         target_inds = Variable(target_inds, requires_grad=False)
 
@@ -49,7 +48,7 @@ class Protonet(nn.Module):
         z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         zq = z[n_class*n_support:]
 
-        # dists = euclidean_dist(zq, z_proto)
+        dists = euclidean_dist(zq, z_proto)
         def learnedMetric(x, y):
             # x: N x D
             # y: M x D
@@ -57,13 +56,15 @@ class Protonet(nn.Module):
             m = y.size(0)
             d = x.size(1)
             assert d == y.size(1)
-            assert d == learnedMetric.size(0)
+            assert d == self.learnedMetric.size(0)
 
             x = x.unsqueeze(1).expand(n, m, d)
             y = y.unsqueeze(0).expand(n, m, d)
             # d: N x M x D -> N x M
             d = (x - y).view(n*m, d)
-            return d.mm(self.learnedMetric).mm(d.t()).view(n, m)
+            # let K = NxM,
+            # K x 1 x D bmm K x D x 1 => K x 1 x 1 
+            return d.mm(self.learnedMetric).unsqueeze(1).bmm(d.unsqueeze(1).transpose(1, 2)).view(n, m)
         
         dists = learnedMetric(zq, z_proto)
         log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
@@ -100,6 +101,7 @@ def load_protonet_conv(**kwargs):
         Flatten()
     )
     n_2x2_MaxPool = 4
-    w = pow(x_dim[0] // pow(2, n_2x2_MaxPool), 2) * z_dim
+    w = pow(x_dim[1] // pow(2, n_2x2_MaxPool), 2) * z_dim
+    # print(w)
     learnedMetric = nn.Parameter(torch.rand(w, w))
     return Protonet(encoder, learnedMetric)
