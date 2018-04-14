@@ -64,7 +64,7 @@ class Protonet(nn.Module):
             d = (x - y).view(n*m, d)
             # let K = NxM,
             # K x 1 x D bmm K x D x 1 => K x 1 x 1
-            viz.image(self.learnedMetric) 
+            viz.text("metric<br>"+str(self.learnedMetric).replace("\n", "<br>")) 
             return d.mm(self.learnedMetric).unsqueeze(1).bmm(d.unsqueeze(1).transpose(1, 2)).view(n, m)
         
         dists = learnedMetric(zq, z_proto)
