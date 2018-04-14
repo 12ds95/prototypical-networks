@@ -107,6 +107,6 @@ def load_protonet_conv(**kwargs):
     w = pow(x_dim[1] // pow(2, n_2x2_MaxPool), 2) * z_dim
     # print(w)
     # learnedMetric = nn.Parameter(torch.rand(w, w))
-    learnedMetric = nn.Parameter(torch.eye(w)*0.99 + 1e-9*torch.rand(w, w))
+    learnedMetric = nn.Parameter(torch.eye(w) + 1e-9*torch.rand(w, w))
     
     return Protonet(encoder, learnedMetric)
