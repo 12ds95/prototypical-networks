@@ -52,7 +52,7 @@ parser.add_argument('--train.optim_method', type=str, default='Adam', metavar='O
                     help='optimization method (default: Adam)')
 parser.add_argument('--train.learning_rate', type=float, default=0.001, metavar='LR',
                     help='learning rate (default: 0.0001)')
-parser.add_argument('--train.decay_every', type=int, default=40, metavar='LRDECAY',
+parser.add_argument('--train.decay_every', type=int, default=20, metavar='LRDECAY',
                     help='number of epochs after which to decay the learning rate')
 default_weight_decay = 0.0
 parser.add_argument('--train.weight_decay', type=float, default=default_weight_decay, metavar='WD',
