@@ -269,7 +269,7 @@ def load_protonet_conv(**kwargs):
             conv_block(hid_dim, z_dim),
             Flatten(),
         )
-    nf = 16
+    nf = 8
     def learned_block(in_channels, out_channels):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 1, stride=1),
