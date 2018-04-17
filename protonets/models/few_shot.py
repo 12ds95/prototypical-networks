@@ -153,7 +153,7 @@ class Protonet(nn.Module):
         z_proto = select_centroids(z[:n_class*n_support])
         
         #dists = k_center_euclidean_dist(zq, z_proto)
-        
+
         def learnedMetric(x, y):
             # x: N x D
             # y: M x K x D
@@ -170,12 +170,12 @@ class Protonet(nn.Module):
             # dists = torch.pow(x - y, 2).sum(3)
             # viz.text("dists_k<br>"+str(dists).replace("\n", "<br>"))
             
-             # d: N x M x K x D -> (N * M * K) x D 
-            d = (x - y).view(n*m*k, d)
+            # d: N x M x K x D -> (N * M * K) x D
+            d = torch.abs(x - y).contiguous().view(n*m*k, 1, 1, d) 
             # let K = NxMxK,
             # K x 1 x D bmm K x D x 1 => K x 1 x 1
             # viz.text("metric<br>"+str(self.learnedMetric).replace("\n", "<br>")) 
-            return d.mm(self.learnedMetric).unsqueeze(1).bmm(d.unsqueeze(1).transpose(1, 2)).view(n, m, k)
+            return self.learnedMetric.forward(torch.abs(d)).contiguous().view(n, m, k)
 
             # dists = torch.pow(x - y, 2).sum(3)
             # # viz.text("dists_k<br>"+str(dists).replace("\n", "<br>"))
@@ -269,10 +269,20 @@ def load_protonet_conv(**kwargs):
             conv_block(hid_dim, z_dim),
             Flatten(),
         )
-    n_2x2_MaxPool = 4
-    w = pow(x_dim[1] // pow(2, n_2x2_MaxPool), 2) * z_dim
-    # print(w)
-    # learnedMetric = nn.Parameter(torch.rand(w, w))
-    learnedMetric = nn.Parameter(torch.eye(w) + torch.rand(w, w))
+    nf = 16
+    def learned_block(in_channels, out_channels):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 1, stride=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU()
+        )
+    learnedMetric = nn.Sequential(
+        learned_block(1, nf * 2),
+        learned_block(nf * 2, nf * 2),
+        learned_block(nf * 2, nf),
+        learned_block(nf, nf),
+        Flatten(),
+        nn.Linear(nf * z_dim * pow(x_dim[1]//16, 2), 1)
+    )
     
     return Protonet(encoder, learnedMetric)
