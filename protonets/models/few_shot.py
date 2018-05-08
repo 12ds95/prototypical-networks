@@ -40,9 +40,9 @@ class Flatten(nn.Module):
 class Protonet(nn.Module):
     def __init__(self, shared_layers, win_size, attention, n_corase, fine_encoders):
         super(Protonet, self).__init__()
-        self.register_buffer('shared_layers', shared_layers)
+        # self.register_buffer('shared_layers', shared_layers)
         self.win_size = win_size
-        # self.shared_layers = shared_layers
+        self.shared_layers = shared_layers
         self.attention = attention
         self.n_corase = n_corase
         for i in range(self.n_corase):
