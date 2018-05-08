@@ -72,7 +72,7 @@ class Protonet(nn.Module):
         # attention matrix part
         z_attention = self.attention.forward(z_share)
         diag_vector = F.softmax(z_attention[:n_class*n_support].mean(0), dim=0).unsqueeze(1).unsqueeze(2).expand(
-            z_attention.size()[1], self.win_size, self.win_size).contiguous().view(-1)
+            z_attention.size()[1], self.win_size, self.win_size).contiguous().view(-1) * z_attention.size()[1]
         # fine feature part
         z = self._modules['fine_encoder_0'].forward(z_share)
         z_dim = z.size(-1)
