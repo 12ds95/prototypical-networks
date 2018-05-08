@@ -124,20 +124,20 @@ def load_protonet_conv(**kwargs):
             nn.MaxPool2d(2)
         )
         
-    # shared_layers = nn.Sequential(
-    #     conv_block(x_dim[0], hid_dim),
-    #     conv_block(hid_dim, hid_dim),
-    #     conv_block(hid_dim, hid_dim),
-    # )
+    shared_layers = nn.Sequential(
+        conv_block(x_dim[0], hid_dim),
+        conv_block(hid_dim, hid_dim),
+        conv_block(hid_dim, hid_dim),
+    )
 
-    model = torch.load('proto_results/m30_5way5shot/best_model.t7')
+    # model = torch.load('proto_results/m30_5way5shot/best_model.t7')
 
     # load pretrained layers 
-    shared_layers = nn.Sequential(
-        copy.deepcopy(model.encoder[0]),
-        copy.deepcopy(model.encoder[1]),
-        copy.deepcopy(model.encoder[2])
-    )
+    # shared_layers = nn.Sequential(
+    #     copy.deepcopy(model.encoder[0]),
+    #     copy.deepcopy(model.encoder[1]),
+    #     copy.deepcopy(model.encoder[2])
+    # )
 
     def gap_block(in_channels, out_channels, pre_size):
         return nn.Sequential(
