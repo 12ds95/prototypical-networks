@@ -6,9 +6,11 @@ from torch.autograd import Variable
 
 from protonets.models import register_model
 
-from .utils import euclidean_dist
 from visdom import Visdom
 import copy
+
+from .utils import euclidean_dist
+from .lstm import LSTM
 
 viz = Visdom()
 
@@ -69,13 +71,33 @@ class Protonet(nn.Module):
         # share layers part
         z_share = self.shared_layers.forward(x)
 
-        # attention matrix part
-        z_attention = self.attention.forward(z_share)
-        diag_vector = F.softmax(z_attention[:n_class*n_support].mean(0), dim=0).unsqueeze(1).unsqueeze(2).expand(
-            z_attention.size()[1], self.win_size, self.win_size).contiguous().view(-1) * z_attention.size()[1]
         # fine feature part
         z = self._modules['fine_encoder_0'].forward(z_share)
         z_dim = z.size(-1)
+        
+        # attention matrix part
+        
+        if xq.is_cuda:
+            hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size **2))).cuda(),
+                Variable(torch.zeros((1, 1, z_dim//(self.win_size **2)))).cuda())
+            z_attention = Variable(torch.ones(1, z_dim//(self.win_size **2))).cuda()        
+        else:
+            hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size **2))),
+                Variable(torch.zeros((1, 1, z_dim//(self.win_size **2)))))
+            z_attention = Variable(torch.ones(1, 1, z_dim//(self.win_size **2))) 
+        
+        for i in range(5):
+            hidden = [hidden[0] + z_attention, hidden[1]]
+            a = F.softmax(z[:n_class*n_support].mv(hidden[0].view(-1).unsqueeze(1).unsqueeze(2).expand(
+                hidden[0].size()[2], self.win_size, self.win_size).contiguous().view(-1)), dim=0)
+            r = torch.sum(a.unsqueeze(1).expand_as(z[:n_class*n_support]) * z[:n_class*n_support], 0)
+            hidden = [hidden[0], r.unsqueeze(0).unsqueeze(1), hidden[1]]
+            out, hidden = self.attention.forward(z_attention, hidden)
+        
+        z_attention = z_attention + out
+        diag_vector = F.softmax(z_attention.view(-1), dim=0).unsqueeze(1).unsqueeze(2).expand(
+            z_attention.size()[2], self.win_size, self.win_size).contiguous().view(-1) * z_attention.size()[1]
+        
 
         z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         zq = z[n_class*n_support:]
@@ -147,12 +169,6 @@ def load_protonet_conv(**kwargs):
             nn.AvgPool2d(pre_size),
         )
 
-    attention = nn.Sequential(
-        conv_block(hid_dim, hid_dim),
-        gap_block(hid_dim, hid_dim, x_dim[1] // 16),
-        Flatten()
-    )
-
     fine_encoders = []
     for i in range(n_corase):
         fine_encoders.append(nn.Sequential(
@@ -163,4 +179,7 @@ def load_protonet_conv(**kwargs):
     n_2x2_MaxPool = 4
     win_size = x_dim[1] // pow(2, n_2x2_MaxPool)
 
+    attention = LSTM(hid_dim, hid_dim, z_dim * win_size**2)
+
     return Protonet(shared_layers, win_size, attention, n_corase, fine_encoders)
+
