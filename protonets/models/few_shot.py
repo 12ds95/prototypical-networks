@@ -10,7 +10,7 @@ from visdom import Visdom
 import copy
 
 from .utils import euclidean_dist
-from .lstm import LSTM
+from .lstm import LSTM, LayerNormLSTM
 
 viz = Visdom()
 
@@ -80,7 +80,7 @@ class Protonet(nn.Module):
         if xq.is_cuda:
             hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size **2))).cuda(),
                 Variable(torch.zeros((1, 1, z_dim//(self.win_size **2)))).cuda())
-            z_attention = Variable(torch.ones(1, z_dim//(self.win_size **2))).cuda()        
+            z_attention = Variable(torch.ones(1, 1, z_dim//(self.win_size **2))).cuda()        
         else:
             hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size **2))),
                 Variable(torch.zeros((1, 1, z_dim//(self.win_size **2)))))
@@ -179,7 +179,7 @@ def load_protonet_conv(**kwargs):
     n_2x2_MaxPool = 4
     win_size = x_dim[1] // pow(2, n_2x2_MaxPool)
 
-    attention = LSTM(hid_dim, hid_dim, z_dim * win_size**2)
+    attention = LayerNormLSTM(hid_dim, hid_dim, z_dim * win_size**2)
 
     return Protonet(shared_layers, win_size, attention, n_corase, fine_encoders)
 
