@@ -86,7 +86,7 @@ class Protonet(nn.Module):
                 Variable(torch.zeros((1, 1, z_dim//(self.win_size **2)))))
             z_attention = Variable(torch.ones(1, 1, z_dim//(self.win_size **2))) 
         
-        for i in range(5):
+        for i in range(20):
             hidden = [hidden[0] + z_attention, hidden[1]]
             a = F.softmax(z[:n_class*n_support].mv(hidden[0].view(-1).unsqueeze(1).unsqueeze(2).expand(
                 hidden[0].size()[2], self.win_size, self.win_size).contiguous().view(-1)), dim=0)
@@ -95,7 +95,7 @@ class Protonet(nn.Module):
             out, hidden = self.attention.forward(z_attention, hidden)
         
         z_attention = z_attention + out
-        diag_vector = F.softmax(z_attention.view(-1), dim=0).unsqueeze(1).unsqueeze(2).expand(
+        diag_vector = z_attention.view(-1).unsqueeze(1).unsqueeze(2).expand(
             z_attention.size()[2], self.win_size, self.win_size).contiguous().view(-1) * z_attention.size()[1]
         
 
