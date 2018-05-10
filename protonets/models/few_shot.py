@@ -14,23 +14,23 @@ from .lstm import LSTM, LayerNormLSTM
 
 viz = Visdom()
 
-def attentionMetric(x, y, learnedMetric):
-        # x: N x D
-        # y: M x D
-        n = x.size(0)
-        m = y.size(0)
-        d = x.size(1)
-        assert d == y.size(1)
-        assert d == learnedMetric.size(0)
+# def attentionMetric(x, y, learnedMetric):
+#         # x: N x D
+#         # y: M x D
+#         n = x.size(0)
+#         m = y.size(0)
+#         d = x.size(1)
+#         assert d == y.size(1)
+#         assert d == learnedMetric.size(0)
 
-        x = x.unsqueeze(1).expand(n, m, d)
-        y = y.unsqueeze(0).expand(n, m, d)
-        # d: N x M x D -> N x M
-        d = (x - y).view(n*m, d)
-        # let K = NxM,
-        # K x 1 x D bmm K x D x 1 => K x 1 x 1
-        # viz.text("metric<br>"+str(self.learnedMetric).replace("\n", "<br>")) 
-        return d.mm(learnedMetric).unsqueeze(1).bmm(d.unsqueeze(1).transpose(1, 2)).view(n, m)
+#         x = x.unsqueeze(1).expand(n, m, d)
+#         y = y.unsqueeze(0).expand(n, m, d)
+#         # d: N x M x D -> N x M
+#         d = (x - y).view(n*m, d)
+#         # let K = NxM,
+#         # K x 1 x D bmm K x D x 1 => K x 1 x 1
+#         # viz.text("metric<br>"+str(self.learnedMetric).replace("\n", "<br>")) 
+#         return d.mm(learnedMetric).unsqueeze(1).bmm(d.unsqueeze(1).transpose(1, 2)).view(n, m)
 
 class Flatten(nn.Module):
     def __init__(self):
@@ -78,32 +78,28 @@ class Protonet(nn.Module):
         # attention matrix part
         
         if xq.is_cuda:
-            hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size **2))).cuda(),
-                Variable(torch.zeros((1, 1, z_dim//(self.win_size **2)))).cuda())
-            z_attention = Variable(torch.ones(1, 1, z_dim//(self.win_size **2))).cuda()        
+            hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size**2) * 5)).cuda(),
+                Variable(torch.zeros(1, 1, z_dim//(self.win_size**2) * 5)).cuda())
+            z_attention = Variable(torch.randn(1, 1, z_dim//(self.win_size**2) * 5)).cuda()        
         else:
-            hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size **2))),
-                Variable(torch.zeros((1, 1, z_dim//(self.win_size **2)))))
-            z_attention = Variable(torch.ones(1, 1, z_dim//(self.win_size **2))) 
+            hidden = (Variable(torch.zeros(1, 1, z_dim//(self.win_size**2) * 5)),
+                Variable(torch.zeros(1, 1, z_dim//(self.win_size**2) * 5)))
+            z_attention = Variable(torch.randn(1, 1, z_dim//(self.win_size**2) * 5))
         
-        for i in range(20):
-            hidden = [hidden[0] + z_attention, hidden[1]]
-            a = F.softmax(z[:n_class*n_support].mv(hidden[0].view(-1).unsqueeze(1).unsqueeze(2).expand(
-                hidden[0].size()[2], self.win_size, self.win_size).contiguous().view(-1)), dim=0)
-            r = torch.sum(a.unsqueeze(1).expand_as(z[:n_class*n_support]) * z[:n_class*n_support], 0)
+        for i in range(5):
+            hidden = [hidden[0], hidden[1]]
+            r = torch.sum(z[:n_class*n_support], 0)
             hidden = [hidden[0], r.unsqueeze(0).unsqueeze(1), hidden[1]]
-            out, hidden = self.attention.forward(z_attention, hidden)
+            z_attention, hidden = self.attention.forward(z_attention, hidden)
         
-        z_attention = z_attention + out
-        diag_vector = z_attention.view(-1).unsqueeze(1).unsqueeze(2).expand(
-            z_attention.size()[2], self.win_size, self.win_size).contiguous().view(-1) * z_attention.size()[1]
-        
+        # z_attention = z_attention + out
+        z_attention = z_attention.view(-1).unsqueeze(1).expand(-1, self.win_size**2).contiguous().view(z_dim, -1)
 
-        z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
+        # z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         zq = z[n_class*n_support:]
 
-        dists = attentionMetric(zq, z_proto, torch.diag(diag_vector))
-
+        # dists = attentionMetric(zq, z_proto, torch.diag(diag_vector))
+        dists = zq.mm(z_attention)
         log_p_y = F.log_softmax(-dists, dim=1).view(n_class, n_query, -1)
         
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
@@ -179,7 +175,7 @@ def load_protonet_conv(**kwargs):
     n_2x2_MaxPool = 4
     win_size = x_dim[1] // pow(2, n_2x2_MaxPool)
 
-    attention = LayerNormLSTM(hid_dim, hid_dim, z_dim * win_size**2)
+    attention = LayerNormLSTM(hid_dim * 5, hid_dim * 5, z_dim * win_size**2)
 
     return Protonet(shared_layers, win_size, attention, n_corase, fine_encoders)
 
