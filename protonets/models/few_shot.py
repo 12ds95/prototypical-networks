@@ -42,6 +42,9 @@ class Protonet(nn.Module):
                        xq.view(n_class * n_query, *xq.size()[2:])], 0)
 
         z = self.encoder.forward(x)
+        # suppose x is a Variable of size [4, 16], 4 is batch_size, 16 is feature dimension
+        norm = z.norm(p=2, dim=1, keepdim=True)
+        z = z.div(norm.expand_as(z).add(1e-20))
         # viz.text("z<br>"+str(z).replace("\n", "<br>"))
         z_dim = z.size(-1)
 
