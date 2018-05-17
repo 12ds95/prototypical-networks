@@ -87,8 +87,7 @@ def load_protonet_conv(**kwargs):
         conv_block(hid_dim, hid_dim),
         conv_block(hid_dim, hid_dim),
         conv_block(hid_dim, z_dim),
-        Flatten(),
-        nn.Linear(1600, 256)
+        Flatten()
     )
 
     return Protonet(encoder)
