@@ -42,18 +42,21 @@ class Protonet(nn.Module):
                        xq.view(n_class * n_query, *xq.size()[2:])], 0)
 
         z = self.encoder.forward(x)
-        # suppose x is a Variable of size [4, 16], 4 is batch_size, 16 is feature dimension
-        norm = z.norm(p=2, dim=1, keepdim=True)
-        z = z.div(norm.expand_as(z).add(1e-20))
+        # norm = z.norm(p=2, dim=1, keepdim=True)
+        # z = z.div(norm.expand_as(z).add(1e-20))
         # viz.text("z<br>"+str(z).replace("\n", "<br>"))
         z_dim = z.size(-1)
 
         z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         zq = z[n_class*n_support:]
 
-        dists = euclidean_dist(zq, z_proto)
+        # dists = euclidean_dist(zq, z_proto)
 
-        log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
+        outputs = torch.cat(
+            list(F.cosine_similarity(zq, z_proto[i].view(1, -1).expand_as(zq)).view(-1, 1) 
+                for i in range(n_class)), 1)
+
+        log_p_y = F.log_softmax(outputs).view(n_class, n_query, -1)
 
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
 
@@ -84,7 +87,8 @@ def load_protonet_conv(**kwargs):
         conv_block(hid_dim, hid_dim),
         conv_block(hid_dim, hid_dim),
         conv_block(hid_dim, z_dim),
-        Flatten()
+        Flatten(),
+        nn.Linear(1600, 512)
     )
 
     return Protonet(encoder)
