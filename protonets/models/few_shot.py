@@ -81,7 +81,7 @@ class Protonet(nn.Module):
                 # print(F.cosine_similarity(a, b))                
                 cosine_similarity_loss.append(F.cosine_similarity(a, b))
         cosine_similarity_loss = torch.cat(cosine_similarity_loss, 0).mean()
-        print(cosine_similarity_loss)  
+        # print(cosine_similarity_loss)  
         log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
 
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
