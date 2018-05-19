@@ -50,16 +50,20 @@ class Protonet(nn.Module):
         z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         zq = z[n_class*n_support:]
 
-        # dists = euclidean_dist(zq, z_proto)
-
-        outputs = torch.cat(
-            list(F.cosine_similarity(zq, z_proto[i].view(1, -1).expand_as(zq)).view(-1, 1) 
-                for i in range(n_class)), 1)
-
-        log_p_y = F.log_softmax(outputs).view(n_class, n_query, -1)
+        dists = euclidean_dist(zq, z_proto)
+        label_predicts = dists.view(n_class, n_query, n_class) 
+        
+        cosine_similarity_loss = []
+        for i in range(n_class):
+            for j in range(n_query):
+                for k in range(j+1, n_query):                
+                    cosine_similarity_loss.append(F.cosine_similarity(label_predicts[i][j].view(1, -1), label_predicts[i][k].view(1, -1)))
+        cosine_similarity_loss = torch.cat(cosine_similarity_loss, 0).mean()
+        
+        log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
 
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
-
+        loss_val = cosine_similarity_loss
         _, y_hat = log_p_y.max(2)
         acc_val = torch.eq(y_hat, target_inds.squeeze()).float().mean()
 
