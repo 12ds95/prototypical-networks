@@ -8,6 +8,7 @@ from protonets.models import register_model
 
 from .utils import euclidean_dist
 from visdom import Visdom
+import copy
 viz = Visdom()
 
 class Flatten(nn.Module):
@@ -54,12 +55,33 @@ class Protonet(nn.Module):
         label_predicts = dists.view(n_class, n_query, n_class) 
         
         cosine_similarity_loss = []
-        for i in range(n_class):
+        # print("class: %d ###################" % 0)
+        for j in range(n_query):
+            # print("idx: %d ###################" % j)
+            for k in range(j+1, n_query):
+                a = label_predicts[0][j][1:].view(1, -1)
+                b = label_predicts[0][k][1:].view(1, -1)
+                # print(F.cosine_similarity(a, b))                
+                cosine_similarity_loss.append(F.cosine_similarity(a, b))
+        for i in range(1, n_class-1):
+            # print("class: %d ###################" % i)
             for j in range(n_query):
-                for k in range(j+1, n_query):                
-                    cosine_similarity_loss.append(F.cosine_similarity(label_predicts[i][j].view(1, -1), label_predicts[i][k].view(1, -1)))
+                # print("idx: %d ###################" % j)
+                for k in range(j+1, n_query):
+                    a = torch.cat((label_predicts[i][j][:i], label_predicts[i][j][i+1:])).view(1, -1)
+                    b = torch.cat((label_predicts[i][k][:i], label_predicts[i][k][i+1:])).view(1, -1)
+                    # print(F.cosine_similarity(a, b))                
+                    cosine_similarity_loss.append(F.cosine_similarity(a, b))
+        # print("class: %d ###################" % n_class)
+        for j in range(n_query):
+            # print("idx: %d ###################" % j)
+            for k in range(j+1, n_query):
+                a = label_predicts[n_class-1][j][:n_class-1].view(1, -1)
+                b = label_predicts[n_class-1][k][:n_class-1].view(1, -1)
+                # print(F.cosine_similarity(a, b))                
+                cosine_similarity_loss.append(F.cosine_similarity(a, b))
         cosine_similarity_loss = torch.cat(cosine_similarity_loss, 0).mean()
-        
+        print(cosine_similarity_loss)  
         log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
 
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
