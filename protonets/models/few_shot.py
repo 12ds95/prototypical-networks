@@ -210,7 +210,7 @@ class Protonet(nn.Module):
         #     nanFilter = nanFilter.cuda()
         # dived = torch.max(dived, nanFilter)
         # log_p_y = torch.log((dists.add(1e-20).div(dived)).contiguous().view(n_class, n_query, -1))        
-        log_p_y = torch.log((dists.div(dived).add(1e-35)).contiguous().view(n_class, n_query, -1))
+        log_p_y = torch.log((dists.div(dived).add(1e-20)).contiguous().view(n_class, n_query, -1))
         # viz.text("log_p_y<br>"+str(log_p_y).replace("\n", "<br>"))
         # grad = torch.zeros(log_p_y.size())
         # def extract(var):
