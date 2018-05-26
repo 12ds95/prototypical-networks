@@ -106,10 +106,10 @@ class Protonet(nn.Module):
             """
             # viz.text("xs<br>"+str(xs).replace("\n", "<br>"))
             centroids = None
-            nClusters = 1
+            nClusters = 2
             for i in range(n_class):
                 X = xs[i * n_support:(i+1) * n_support]                
-                if nClusters != 1:
+                if nClusters == 2:
                     kmeans = KMeans(n_clusters=nClusters, max_iter=1, random_state=0).fit(X.data.cpu().numpy())
                     c0idxs = np.where(kmeans.labels_ == 0)
                     c1idxs = np.where(kmeans.labels_ == 1)                   
@@ -134,6 +134,33 @@ class Protonet(nn.Module):
                     else:
                         kmeans = torch.cat((X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1), 
                             X[c1idxs].contiguous().view(1, len(c1idxs[0]), z_dim).mean(1)), 0)
+                elif nClusters == 3:
+                    kmeans = KMeans(n_clusters=nClusters, max_iter=1, random_state=0).fit(X.data.cpu().numpy())
+                    c0idxs = np.where(kmeans.labels_ == 0)
+                    c1idxs = np.where(kmeans.labels_ == 1)  
+                    c2idxs = np.where(kmeans.labels_ == 2)                  
+                    # if len(c0idxs[0]) == 0:
+                    #     gradCenter = X[c1idxs].contiguous().view(1, len(c1idxs[0]), z_dim).mean(1)
+                    #     if np.array_equal(gradCenter.data.cpu().numpy(), kmeans.cluster_centers_[0]):
+                    #         randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[1])).view(1, z_dim)
+                    #     else:
+                    #         randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[0])).view(1, z_dim)
+                    #     if xq.is_cuda:
+                    #         randCenter = randCenter.cuda()
+                    #     kmeans = torch.cat((randCenter, gradCenter), 0) 
+                    # elif len(c1idxs[0]) == 0:
+                    #     gradCenter = X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1)                        
+                    #     if np.array_equal(gradCenter.data.cpu().numpy(), kmeans.cluster_centers_[0]):
+                    #         randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[1])).view(1, z_dim)
+                    #     else:
+                    #         randCenter = Variable(torch.from_numpy(kmeans.cluster_centers_[0])).view(1, z_dim)
+                    #     if xq.is_cuda:
+                    #         randCenter = randCenter.cuda()                        
+                    #     kmeans = torch.cat((randCenter, gradCenter), 0)
+                    # else:
+                    kmeans = torch.cat((X[c0idxs].contiguous().view(1, len(c0idxs[0]), z_dim).mean(1), 
+                        X[c1idxs].contiguous().view(1, len(c1idxs[0]), z_dim).mean(1), 
+                        X[c2idxs].contiguous().view(1, len(c2idxs[0]), z_dim).mean(1)), 0)
                 else:
                     kmeans = KMeans(n_clusters=nClusters, max_iter=1, random_state=0).fit(X.data.cpu().numpy())
                     c0idxs = np.where(kmeans.labels_ == 0)
