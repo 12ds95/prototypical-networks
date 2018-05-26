@@ -186,8 +186,7 @@ class Protonet(nn.Module):
         minx = minx.unsqueeze(1).unsqueeze(2).expand(*dists.size())
         # viz.text("minx<br>"+str(minx).replace("\n", "<br>"))
         # viz.text("dists<br>"+str(dists).replace("\n", "<br>"))
-        dists = torch.exp(-dists.sub(minx).sum(2))
-
+        dists = torch.exp(-dists.sub(minx)).sum(2)
 
         # log_p_y_1 = F.log_softmax(-dists).view(n_class, n_query, -1)
         # assert log_p_y_1.size() == log_p_y.size()
@@ -210,7 +209,7 @@ class Protonet(nn.Module):
         #     nanFilter = nanFilter.cuda()
         # dived = torch.max(dived, nanFilter)
         # log_p_y = torch.log((dists.add(1e-20).div(dived)).contiguous().view(n_class, n_query, -1))        
-        log_p_y = torch.log((dists.div(dived).add(1e-20)).contiguous().view(n_class, n_query, -1))
+        log_p_y = torch.log(dists.div(dived).add(1e-20)).contiguous().view(n_class, n_query, -1)
         # viz.text("log_p_y<br>"+str(log_p_y).replace("\n", "<br>"))
         # grad = torch.zeros(log_p_y.size())
         # def extract(var):
