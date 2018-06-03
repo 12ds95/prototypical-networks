@@ -25,7 +25,7 @@ parser.add_argument('--data.test_query', type=int, default=15, metavar='TESTQUER
                     help="number of query examples per class in test. 0 means same as data.query (default: 15)")
 parser.add_argument('--data.train_episodes', type=int, default=100, metavar='NTRAIN',
                     help="number of train episodes per epoch (default: 100)")
-parser.add_argument('--data.test_episodes', type=int, default=1000, metavar='NTEST',
+parser.add_argument('--data.test_episodes', type=int, default=100, metavar='NTEST',
                     help="number of test episodes per epoch (default: 100)")
 parser.add_argument('--data.trainval', action='store_true', help="run in train+validation mode (default: False)")
 parser.add_argument('--data.sequential', action='store_true', help="use sequential sampler instead of episodic (default: False)")
