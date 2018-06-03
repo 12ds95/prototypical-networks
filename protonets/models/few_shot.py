@@ -53,8 +53,8 @@ class Protonet(nn.Module):
 
         # dists = euclidean_dist(zq, z_proto)
         outputs = torch.cat(
-            list(F.cosine_similarity(zq - zq.mean(dim=1, keepdim=True), 
-                    (z_proto[i] - z_proto[i].mean()).view(1, -1).expand_as(zq)).view(-1, 1) 
+            list(F.cosine_similarity(zq - zq.detach().mean(dim=1, keepdim=True), 
+                    (z_proto[i] - z_proto[i].detach().mean()).view(1, -1).expand_as(zq)).view(-1, 1) 
                 for i in range(n_class)), 1)
         
         log_p_y = F.log_softmax(outputs).view(n_class, n_query, -1)
