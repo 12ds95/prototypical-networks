@@ -51,41 +51,16 @@ class Protonet(nn.Module):
         z_proto = z[:n_class*n_support].view(n_class, n_support, z_dim).mean(1)
         zq = z[n_class*n_support:]
 
-        dists = euclidean_dist(zq, z_proto)
-        label_predicts = dists.view(n_class, n_query, n_class) 
+        # dists = euclidean_dist(zq, z_proto)
+        outputs = torch.cat(
+            list(F.cosine_similarity(zq - zq.mean(dim=1, keepdim=True), 
+                    (z_proto[i] - z_proto[i].mean()).view(1, -1).expand_as(zq)).view(-1, 1) 
+                for i in range(n_class)), 1)
         
-        cosine_similarity_loss = []
-        # print("class: %d ###################" % 0)
-        for j in range(n_query):
-            # print("idx: %d ###################" % j)
-            for k in range(j+1, n_query):
-                a = label_predicts[0][j][1:].view(1, -1)
-                b = label_predicts[0][k][1:].view(1, -1)
-                # print(F.cosine_similarity(a, b))                
-                cosine_similarity_loss.append(F.cosine_similarity(a, b))
-        for i in range(1, n_class-1):
-            # print("class: %d ###################" % i)
-            for j in range(n_query):
-                # print("idx: %d ###################" % j)
-                for k in range(j+1, n_query):
-                    a = torch.cat((label_predicts[i][j][:i], label_predicts[i][j][i+1:])).view(1, -1)
-                    b = torch.cat((label_predicts[i][k][:i], label_predicts[i][k][i+1:])).view(1, -1)
-                    # print(F.cosine_similarity(a, b))                
-                    cosine_similarity_loss.append(F.cosine_similarity(a, b))
-        # print("class: %d ###################" % n_class)
-        for j in range(n_query):
-            # print("idx: %d ###################" % j)
-            for k in range(j+1, n_query):
-                a = label_predicts[n_class-1][j][:n_class-1].view(1, -1)
-                b = label_predicts[n_class-1][k][:n_class-1].view(1, -1)
-                # print(F.cosine_similarity(a, b))                
-                cosine_similarity_loss.append(F.cosine_similarity(a, b))
-        cosine_similarity_loss = torch.cat(cosine_similarity_loss, 0).mean()
-        # print(cosine_similarity_loss)  
-        log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
+        log_p_y = F.log_softmax(outputs).view(n_class, n_query, -1)
 
         loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
-        loss_val = cosine_similarity_loss
+
         _, y_hat = log_p_y.max(2)
         acc_val = torch.eq(y_hat, target_inds.squeeze()).float().mean()
 
