@@ -71,10 +71,11 @@ def main(opt):
         meters['val'] = { field: tnt.meter.AverageValueMeter() for field in opt['log.fields'] }
     
     # 看名字知道功能的start函数，配置优化器
+    gammas = {'Adam': 0.5, 'SGD': 0.5}
     def on_start(state):
         if os.path.isfile(trace_file):
             os.remove(trace_file)
-        state['scheduler'] = lr_scheduler.StepLR(state['optimizer'], opt['train.decay_every'], gamma=0.5)
+        state['scheduler'] = lr_scheduler.StepLR(state['optimizer'], opt['train.decay_every'], gamma=gammas[opt['train.optim_method']])
     engine.hooks['on_start'] = on_start
     
     # 第一个epoch需要解决的事
@@ -143,11 +144,15 @@ def main(opt):
 
     engine.hooks['on_end_epoch'] = partial(on_end_epoch, { })
 
+    optim_configs = {'Adam': {'lr': opt['train.learning_rate'],
+                         'weight_decay': opt['train.weight_decay']},
+    'SGD': { 'lr': opt['train.learning_rate'],
+                         'weight_decay': opt['train.weight_decay'],
+                         'momentum': opt['train.momentum']}}
     engine.train(
         model = model,
         loader = train_loader,
         optim_method = getattr(optim, opt['train.optim_method']),
-        optim_config = { 'lr': opt['train.learning_rate'],
-                         'weight_decay': opt['train.weight_decay'] },
+        optim_config = optim_configs[opt['train.optim_method']],
         max_epoch = opt['train.epochs']
     )
