@@ -113,7 +113,6 @@ def load(opt, splits):
             for class_name in f.readlines():
                 class_names.append(class_name.rstrip('\n'))
         ds = TransformDataset(ListDataset(class_names), transforms)
-
         if opt['data.sequential']:
             sampler = SequentialBatchSampler(len(ds))
         else:
