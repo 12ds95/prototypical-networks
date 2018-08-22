@@ -23,11 +23,11 @@ class Engine(object):
             'stop': False
         }
 
-        #state['optimizer'] = state['optim_method'](state['model'].parameters(), **state['optim_config'])
+        state['optimizer'] = state['optim_method'](state['model'].parameters(), **state['optim_config'])
         
-        state['optimizer'] = torch.optim.SGD(state['model'].parameters(), lr=0.1, momentum=0.9)
+        #state['optimizer'] = torch.optim.SGD(state['model'].parameters(), lr=0.1, momentum=0.9)
 
-        #state['optim_method'](state['model'].parameters(), **state['optim_config'])
+        state['optim_method'](state['model'].parameters(), **state['optim_config'])
 
         self.hooks['on_start'](state)
         while state['epoch'] < state['max_epoch'] and not state['stop']:
