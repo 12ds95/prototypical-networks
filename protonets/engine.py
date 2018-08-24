@@ -45,7 +45,7 @@ class Engine(object):
                 state['optimizer'].zero_grad()
                 loss, state['output'] = state['model'].loss(state['sample'])
                 self.hooks['on_forward'](state)
-                if counter == 4:
+                if counter == 10:
                     loss = loss + tmpLoss
                     loss.backward()
                     counter = 1
