@@ -45,16 +45,17 @@ class Engine(object):
                 state['optimizer'].zero_grad()
                 loss, state['output'] = state['model'].loss(state['sample'])
                 self.hooks['on_forward'](state)
-                if counter == 2:
-                    loss = loss + tmpLoss
-                    loss.backward()
-                    counter = 1
-                elif counter == 1:
-                    tmpLoss = loss
-                    counter += 1                    
-                else:
-                    tmpLoss += loss
-                    counter += 1
+                loss.backward()
+                # if counter == 2:
+                #     loss = loss + tmpLoss
+                #     loss.backward()
+                #     counter = 1
+                # elif counter == 1:
+                #     tmpLoss = loss
+                #     counter += 1                    
+                # else:
+                #     tmpLoss += loss
+                #     counter += 1
                 self.hooks['on_backward'](state)
 
                 state['optimizer'].step()
