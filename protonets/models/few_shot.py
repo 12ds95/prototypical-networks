@@ -74,7 +74,7 @@ def load_protonet_conv(**kwargs):
     def conv_block(in_channels, out_channels):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, eps=0.001, momentum=0.95),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
@@ -86,7 +86,6 @@ def load_protonet_conv(**kwargs):
         conv_block(hid_dim, z_dim),
         Flatten()
     )
-    import numpy as np
     for i in range(4):
-        torch.nn.init.xavier_normal(encoder[i][0].weight)
+        torch.nn.init.kaiming_normal(encoder[i][0].weight, mode='fan_out')
     return Protonet(encoder)
