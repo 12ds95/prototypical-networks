@@ -55,7 +55,11 @@ class Protonet(nn.Module):
 
         log_p_y = F.log_softmax(-dists).view(n_class, n_query, -1)
 
-        loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
+        # loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
+
+        loss = torch.nn.CrossEntropyLoss()
+        target = Variable(torch.arange(0, n_class).view(n_class, 1, 1).expand(n_class, n_query, 1).contiguous().view(-1).long())
+        loss_val = loss((-dists).contiguous(), target)
 
         _, y_hat = log_p_y.max(2)
         acc_val = torch.eq(y_hat, target_inds.squeeze()).float().mean()
