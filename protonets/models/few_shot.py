@@ -59,6 +59,8 @@ class Protonet(nn.Module):
 
         loss = torch.nn.CrossEntropyLoss()
         target = Variable(torch.arange(0, n_class).view(n_class, 1, 1).expand(n_class, n_query, 1).contiguous().view(-1).long())
+        if xq.is_cuda:
+            target = target.cuda()
         loss_val = loss((-dists).contiguous(), target)
 
         _, y_hat = log_p_y.max(2)
