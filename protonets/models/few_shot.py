@@ -92,6 +92,6 @@ def load_protonet_conv(**kwargs):
         conv_block(hid_dim, z_dim),
         Flatten()
     )
-    # for i in range(4):
-    #     torch.nn.init.kaiming_normal(encoder[i][0].weight, mode='fan_out')
+    for i in range(4):
+        torch.nn.init.kaiming_normal(encoder[i][0].weight, mode='fan_out')
     return Protonet(encoder)
