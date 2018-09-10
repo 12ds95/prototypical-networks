@@ -71,39 +71,6 @@ class Protonet(nn.Module):
             'acc': acc_val.data[0]
         }
 
-class ScaledVarianceRandomNormal(init_ops.Initializer):
-    """Initializer that generates tensors with a normal distribution scaled as per https://arxiv.org/pdf/1502.01852.pdf.
-    Args:
-      mean: a python scalar or a scalar tensor. Mean of the random values
-        to generate.
-      stddev: a python scalar or a scalar tensor. Standard deviation of the
-        random values to generate.
-      seed: A Python integer. Used to create random seeds. See
-        @{tf.set_random_seed}
-        for behavior.
-      dtype: The data type. Only floating point types are supported.
-    """
-
-    def __init__(self, mean=0.0, factor=1.0, seed=None):
-        self.mean = mean
-        self.factor = factor
-        self.seed = seed
-
-    def __call__(self, shape, dtype=None, partition_info=None):
-        if dtype is None:
-            dtype = self.dtype
-
-        if shape:
-            n = float(shape[-1])
-        else:
-            n = 1.0
-        for dim in shape[:-2]:
-            n *= float(dim)
-
-        self.stddev = np.sqrt(self.factor * 2.0 / n)
-        return random_ops.random_uniform(shape, self.mean, self.stddev,
-                                        dtype, seed=self.seed)
-
 @register_model('protonet_conv')
 def load_protonet_conv(**kwargs):
     x_dim = kwargs['x_dim']
