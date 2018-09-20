@@ -36,3 +36,12 @@ If you use this code, please cite our paper:
 ### Evaluate
 
 * Run evaluation as: `python scripts/predict/few_shot/run_eval.py --model.model_path results/trainval/best_model.t7`.
+
+----------------------------------
+./data/mini-imagenet 与项目目录同级
+mini-imagenet-support pn代码基础上增加mini-imagenet dataloader
+
+### 说明
+
+执行python -m visdom.server&
+访问http://localhost:8097，查看训练情况
