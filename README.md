@@ -45,3 +45,7 @@ mini-imagenet-support pn代码基础上增加mini-imagenet dataloader
 
 执行python -m visdom.server&
 访问http://localhost:8097，查看训练情况
+
+### *.sh命名方式
+(m)exp[train_way]_[test_way]_[n_shot].sh
+m代表mini-imagenet实验
